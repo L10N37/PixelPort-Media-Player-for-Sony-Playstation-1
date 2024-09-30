@@ -516,7 +516,7 @@
               convertBcdValuesToDecimal(currentValues, decimalValues, 8); // convert return data from cdReady from BCD to decimal
 
                   if (currentValues[track] != decimalValues[track]) // fix this, comparing Dec to BCD
-                  {
+                  { // actually delete it, no longer toggling minutes manually as getlocp is used 
                   trackMinutes = 0x00;
                   }
 
