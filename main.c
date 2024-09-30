@@ -360,7 +360,7 @@
         // No output without CD Mixing turned on
         SpuSetCommonCDMix(1);
 
-        printSpu();
+        printSpu(); // delete this, call at launch , doubled up in controller input 
         
     }
 
@@ -515,7 +515,7 @@
               CdControlB (CdlGetlocP, 0, currentValues);
               convertBcdValuesToDecimal(currentValues, decimalValues, 8); // convert return data from cdReady from BCD to decimal
 
-                  if (currentValues[track] != decimalValues[track]) 
+                  if (currentValues[track] != decimalValues[track]) // fix this, comparing Dec to BCD
                   {
                   trackMinutes = 0x00;
                   }
@@ -608,7 +608,9 @@
 add reverb on / off
 add mute/ demute
 add L/R balance
+add shuffle 
 add volume level displays
+add forward / reverse
 accompanying background display editing
 find a way to move a bar (ascii) across the top graphic for a percent of song played
 
