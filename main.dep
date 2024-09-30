@@ -1,0 +1,17 @@
+main.o: main.c third_party/psyq-iwyu/include/sys/types.h \
+ third_party/psyq-iwyu/include/libgte.h \
+ third_party/psyq-iwyu/include/types.h \
+ third_party/psyq-iwyu/include/libgpu.h \
+ third_party/psyq-iwyu/include/libetc.h \
+ third_party/psyq-iwyu/include/libgs.h \
+ third_party/psyq-iwyu/include/stdio.h \
+ c:\psyq_sdk\mips\lib\gcc\mipsel-none-elf\11.2.0\include\stdint.h \
+ c:\psyq_sdk\mips\lib\gcc\mipsel-none-elf\11.2.0\include\stdint-gcc.h \
+ third_party/psyq-iwyu/include/libsnd.h \
+ third_party/psyq-iwyu/include/rand.h \
+ third_party/psyq-iwyu/include/libapi.h \
+ third_party/psyq-iwyu/include/kernel.h \
+ third_party/psyq-iwyu/include/r3000.h \
+ third_party/psyq-iwyu/include/asm.h \
+ third_party/psyq-iwyu/include/libcd.h \
+ third_party/psyq-iwyu/include/libspu.h background.h tools.c
