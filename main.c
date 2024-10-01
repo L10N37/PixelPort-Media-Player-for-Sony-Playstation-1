@@ -31,47 +31,27 @@
     mostly rewritten
     */
 
-    #include <sys/types.h>
-    #include <libgte.h>
-    #include <libgpu.h>
-    #include <libetc.h>
-    #include <libgs.h>
-    #include <stdio.h>
-    #include <stdint.h> 
-    #include <libsnd.h>
-    // to randomise font colour - not used, repurpose for randomise track
-    #include <rand.h>   
-    #include <libapi.h>  
-
-    // CD library
-    #include <libcd.h>
-    // SPU library
-    #include <libspu.h>
+    #include "common.h"
     // TIM image
     #include "background.h"
-    // BCD to Decimal conversion and othertools
-    #include "tools.c"
-
+#include "libcd.h"
+    #include <stdio.h>
 
     #define OT_LENGTH 1                             // ordering table length
     #define PACKETMAX (300)                         // the max num of objects
     #define MAX_VOLUME_CD 32767                     // maximum volume for an audio CD (0x7FFF)
     #define MAX_VOLUME_MASTER 16383                 // maximum master volume (0x3FFF)
 
-    //font pos, change system font colour hack
-    #define FONTX   960
-    #define FONTY   0
-
     GsOT      WorldOrderingTable[2];                 // ordering table handlers
     GsOT_TAG  OrderingTable[2][1<<OT_LENGTH];        // ordering tables
     PACKET    GPUOutputPacket[2][PACKETMAX];         // GPU Packet work area
 
     GsSPRITE image1[2];                              // sprite handler
-
+    
     unsigned long __ramsize =   0x00200000;          // force 2 megabytes of RAM
     unsigned long __stacksize = 0x00004000;          // force 16 kilobytes of stack
 
-    extern unsigned char image[];       // bg image array converted from TIM file
+    unsigned char image[];       // bg image array converted from TIM file
 
     // Globals -----
     long int image1_addr;				// DRAM address storage of TIM file
@@ -84,7 +64,7 @@
     u_char result[8];                    // general response storage
     int numTracks;                       // for storing number of audio tracks found on CD
     int debounceTimer= 0;                // controller input debounce timer
-    // ------------
+    unsigned int currentTrackTimeInSeconds = 0;  // to hold current track time in seconds
 
     // for readability when accessing decimalValues variable
         typedef enum {
@@ -98,6 +78,12 @@
         aframe
     } TrackInfoIndex;
 
+    typedef struct 
+    {
+                int mins;
+                int seconds;
+    } TrackTime;
+    
     void seedRandom(CVECTOR *fntColor, CVECTOR *fntColorBG) {
         long rootCounterValue = GetRCnt(0);  // Get the root counter value
 
@@ -347,7 +333,7 @@
 
     }
 
-        void initSpu(int applyVolumeCd, int applyVolumeMaster) 
+    void initSpu(int applyVolumeCd, int applyVolumeMaster) 
     {
 /*
         The volume mode is ‘direct mode’ and the range of the values which can be set to the mvolL and mvolR
@@ -360,7 +346,7 @@
         // No output without CD Mixing turned on
         SpuSetCommonCDMix(1);
 
-        printSpu(); // delete this, call at launch , doubled up in controller input 
+        printSpu();
         
     }
 
@@ -381,7 +367,7 @@
     debounceTimer++;
 
         switch (pad) {
-
+            /////////////////////////////////////   
             case PADLup:
 
                 if (newVolumeLevelCd < MAX_VOLUME_CD) 
@@ -390,12 +376,9 @@
                 initSpu(newVolumeLevelCd, newVolumeLevelMaster);
                 initSpu(newVolumeLevelCd, newVolumeLevelMaster);
                 }
-            
-                //CdControlB (CdlDemute,0,0);
-                printSpu();
                 printf("\nUP D-Pad pressed, volume increased\n");
                 break;
-
+            /////////////////////////////////////   
             case PADLdown:
 
                 if (newVolumeLevelCd > 0) 
@@ -404,14 +387,10 @@
                 initSpu(newVolumeLevelCd, newVolumeLevelMaster);
                 initSpu(newVolumeLevelCd, newVolumeLevelMaster);
                 }
-
                 printf("\nDown D-Pad pressed, volume decreased\n");
-                //CdControlB (CdlMute,0,0);
-                printSpu();
-            
                 break;
-
-            case PADLright: // Increment the track value if not exceeding total track # on CD, else back to track 1
+            /////////////////////////////////////   
+            case PADLright: // Increment the track with wrap around to first track
 
                 // Increment track value if not at last track
                 if (trackValue < numTracks)
@@ -426,10 +405,9 @@
                 CdControlF (CdlPlay, (u_char *)&loc[trackValue]);
                 printf("\nTrack value: %d\n", trackValue);
                 printf("\nRight D-Pad pressed, increment track");
-
                 break;
-
-            case PADLleft: // Decrement the track value if its not on track 1
+            /////////////////////////////////////   
+            case PADLleft: // Decrement the track with wrap around to final track
 
                 // if playing first track, go to final track
                 if (trackValue == 1)
@@ -444,15 +422,15 @@
 
                 CdControlF (CdlPlay, (u_char *)&loc[trackValue]);
                 printf("\nTrack value: %d\n", trackValue);
-                printf("\nLeft D-Pad pressed, decrement track");
-                
+                printf("\nLeft D-Pad pressed, decrement track"); 
                 break;
-                
+            /////////////////////////////////////      
             case PADRup:
-    /////////////////////////////////////              
+                       
                 break;
-
+            /////////////////////////////////////   
             case PADRdown: // Play/Pause
+
             static u_char pause = 0;
             if (pause == 0) 
             {
@@ -468,29 +446,42 @@
             printf("\nRESUMING PLAY FROM PAUSE");
             
             }
-                        
-                break;
+            break;
+            /////////////////////////////////////   
+            case PADRright: //Mute/ Demute
 
-            case PADRright:
-                        //   O btn
-                break;
-
+            static u_char mute = 0;
+            if (mute == 0) 
+            {
+            CdControlF (CdlMute, 0);
+            mute = 1;
+            printf("\nAudio Muted");
+            
+            }
+            else if (mute == 1)
+            {
+            CdControlF (CdlDemute, 0);
+            mute = 0;
+            printf("\nAudio Demuted");
+            }
+            break;
+            /////////////////////////////////////   
             case PADRleft:
                         //   sq btn
                 break;
-
+            /////////////////////////////////////   
             case PADL1:
-                        // L1
+            CdControlF (CdlBackward, 0);
                 break;
-
+            /////////////////////////////////////   
             case PADL2:
                         // L2
                 break;
-
+            /////////////////////////////////////   
             case PADR1:
-                        // R1
+            CdControlF (CdlForward, 0); 
                 break;
-
+            /////////////////////////////////////   
             case PADR2:
                         // R2
                 break;
@@ -507,50 +498,231 @@
                 break;
         }
       }
-      
-  void playerInformationLogic(){
-              
-              u_char currentValues[8] ={0x00};
-              static u_char trackMinutes = 0x00;
-              CdControlB (CdlGetlocP, 0, currentValues);
-              convertBcdValuesToDecimal(currentValues, decimalValues, 8); // convert return data from cdReady from BCD to decimal
+          
+    void calculateCurrentTrackLength() {
+            // Get the current track number
+            int currentTrack = decimalValues[track]; // Assuming this holds the current track number
 
-                  if (currentValues[track] != decimalValues[track]) // fix this, comparing Dec to BCD
-                  { // actually delete it, no longer toggling minutes manually as getlocp is used 
-                  trackMinutes = 0x00;
-                  }
+            // Validate current track number
+            if (currentTrack < 1 || currentTrack > numTracks) {
+                printf("Invalid current track: %d\n", currentTrack);
+                return;
+            }
 
-              // Print the CURRENT track information
-              FntPrint("           %0d\n\n", numTracks);                // Track Count main screen 
-              FntPrint("           %0d\n\n", decimalValues[track]);     // Current Track main screen
+            // Temporary variables for BCD values and decimal conversion
+            unsigned char bcdValues[2];
+            int decimalValues[2];
+            TrackTime trackStartTime[101]; // Local array to hold track start times
+            int totalTimeInSeconds;
 
-              if (shuffle == 0)
-              {
-                FntPrint ("           OFF\n\n");                        // Shuffle on or off? main screen
-              }
-              else if (shuffle == 1)
-              {
-                FntPrint("           ON\n\n");
-              }
+            // Get the total time (track 0)
+            bcdValues[0] = loc[0].minute; // Total time minutes
+            bcdValues[1] = loc[0].second; // Total time seconds
+            convertBcdValuesToDecimal(bcdValues, decimalValues, 2);
+            totalTimeInSeconds = (decimalValues[0] * 60) + decimalValues[1];
 
-              FntPrint("           %02d:", decimalValues[min]), FntPrint("%02d\n", decimalValues[sec]);   // time played, main screen
+            // Get pregap from Track 1
+            bcdValues[0] = loc[1].minute; // Track 1 minutes
+            bcdValues[1] = loc[1].second; // Track 1 seconds
+            convertBcdValuesToDecimal(bcdValues, decimalValues, 2);
+            int pregapMinutes = decimalValues[0];
+            int pregapSeconds = decimalValues[1];
+
+            // Calculate track start times
+            for (int i = 1; i <= numTracks; i++) {
+                bcdValues[0] = loc[i].minute;
+                bcdValues[1] = loc[i].second;
+                convertBcdValuesToDecimal(bcdValues, decimalValues, 2);
+
+                // Adjust for pregap
+                int adjustedMinutes = decimalValues[0] - pregapMinutes;
+                int adjustedSeconds = decimalValues[1] - pregapSeconds;
+
+                // Handle seconds underflow
+                if (adjustedSeconds < 0) {
+                    adjustedMinutes--;
+                    adjustedSeconds += 60;
+                }
+
+                // Handle minutes underflow
+                if (adjustedMinutes < 0) {
+                    adjustedMinutes = 0;
+                    adjustedSeconds = 0;
+                }
+
+                trackStartTime[i].mins = adjustedMinutes;
+                trackStartTime[i].seconds = adjustedSeconds;
+            }
+
+            // Calculate current track length
+            int lengthMinutes, lengthSeconds;
+
+            if (currentTrack < numTracks) {
+                lengthMinutes = trackStartTime[currentTrack + 1].mins - trackStartTime[currentTrack].mins;
+                lengthSeconds = trackStartTime[currentTrack + 1].seconds - trackStartTime[currentTrack].seconds;
+            } else {
+                // Last track length calculation using total time
+                lengthMinutes = trackStartTime[0].mins - trackStartTime[currentTrack].mins;
+                lengthSeconds = trackStartTime[0].seconds - trackStartTime[currentTrack].seconds;
+            }
+
+            // Handle seconds underflow for length
+            if (lengthSeconds < 0) {
+                lengthMinutes--;
+                lengthSeconds += 60;
+            }
+
+            // Convert to total seconds
+            currentTrackTimeInSeconds = (lengthMinutes * 60) + lengthSeconds;
+
+            // Print the current track length in seconds
+            printf("Track %02d Length: %02d:%02d (%d seconds)\n", currentTrack, lengthMinutes, lengthSeconds, currentTrackTimeInSeconds);
         }
 
-    
-    void getTableOfContents() {
+        void getTableOfContents() {
 
-        // Get the number of tracks from the TOC
-        while ((numTracks = CdGetToc(loc)) == 0) {
-            FntPrint("No TOC found: please use CD-DA disc...\n");
-        } 
+            unsigned char bcdValues[2];
+            int decimalValues[2];
+            TrackTime trackStartTime[101]; // Array to hold track start times, including total time
+            int trackLengths[101]; // Array to hold track lengths in seconds
+            
+            while ((numTracks = CdGetToc(loc)) == 0) 
+            {
+                FntPrint("No TOC found: please use CD-DA disc...\n");
+            }
+
+            // Print total time
+            bcdValues[0] = loc[0].minute; // Total time minutes
+            bcdValues[1] = loc[0].second; // Total time seconds
+            convertBcdValuesToDecimal(bcdValues, decimalValues, 2);
+            trackStartTime[0].mins = decimalValues[0];
+            trackStartTime[0].seconds = decimalValues[1];
+            printf("Total Time: %02d:%02d\n\n", trackStartTime[0].mins, trackStartTime[0].seconds);
+
+            printf("Track starting positions:\n");
+
+            // Get pregap from Track 1
+            bcdValues[0] = loc[1].minute; // Track 1 minutes
+            bcdValues[1] = loc[1].second; // Track 1 seconds
+            convertBcdValuesToDecimal(bcdValues, decimalValues, 2);
+            int pregapMinutes = decimalValues[0];
+            int pregapSeconds = decimalValues[1];
+
+            // Calculate track start times and store in trackStartTime
+            for (int i = 1; i <= numTracks; i++) {
+                bcdValues[0] = loc[i].minute;
+                bcdValues[1] = loc[i].second;
+                convertBcdValuesToDecimal(bcdValues, decimalValues, 2);
+
+                // Deduct pregap
+                int adjustedMinutes = decimalValues[0] - pregapMinutes;
+                int adjustedSeconds = decimalValues[1] - pregapSeconds;
+
+                // Handle seconds underflow
+                if (adjustedSeconds < 0) {
+                    adjustedMinutes--;
+                    adjustedSeconds += 60;
+                }
+
+                // Handle minutes underflow
+                if (adjustedMinutes < 0) {
+                    adjustedMinutes = 0;
+                    adjustedSeconds = 0;
+                }
+
+                trackStartTime[i].mins = adjustedMinutes;
+                trackStartTime[i].seconds = adjustedSeconds;
+
+                // Print the track start time
+                printf("Track %02d | %02d:%02d\n", i, trackStartTime[i].mins, trackStartTime[i].seconds);
+            }
+
+            printf("\nTrack lengths:\n");
+
+            // Calculate and print track lengths
+            for (int i = 1; i < numTracks; i++) {
+                int lengthMinutes = trackStartTime[i + 1].mins - trackStartTime[i].mins;
+                int lengthSeconds = trackStartTime[i + 1].seconds - trackStartTime[i].seconds;
+
+                // Handle seconds underflow for length
+                if (lengthSeconds < 0) {
+                    lengthMinutes--;
+                    lengthSeconds += 60;
+                }
+
+                printf("Track %02d | %02d:%02d\n", i, lengthMinutes, lengthSeconds);
+            }
+
+            // Last track length calculation using total time
+            int lastTrackLengthMinutes = trackStartTime[0].mins - trackStartTime[numTracks].mins;
+            int lastTrackLengthSeconds = trackStartTime[0].seconds - trackStartTime[numTracks].seconds;
+
+            // Handle seconds underflow for last track length
+            if (lastTrackLengthSeconds < 0) {
+                lastTrackLengthMinutes--;
+                lastTrackLengthSeconds += 60;
+            }
+
+            // Adjust for the actual length of the last track
+            if (lastTrackLengthMinutes < 0) {
+                lastTrackLengthMinutes = 0;
+                lastTrackLengthSeconds = 0;
+            }
+
+            printf("Track %02d | %02d:%02d\n", numTracks, lastTrackLengthMinutes, lastTrackLengthSeconds);
+        }
+
+    void playerInformationLogic() {
+        u_char currentValues[8] = {0x00};
+        CdControlB(CdlGetlocP, 0, currentValues);
+        convertBcdValuesToDecimal(currentValues, decimalValues, 8); // convert return data from CdGetLocP from BCD to decimal
+
+        // Print the CURRENT track information
+        FntPrint("           %0d\n\n", numTracks); // Track Count main screen 
+        FntPrint("           %0d\n\n", decimalValues[track]); // Current Track main screen
+
+        if (shuffle == 0) {
+            FntPrint("           OFF\n\n"); // Shuffle on or off? main screen
+        } else {
+            FntPrint("           ON\n\n");
+        }
+
+        FntPrint("           %02d:%02d\n", decimalValues[min], decimalValues[sec]); // time played, main screen
+
+        // progress bar spacing
+        FntPrint("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
         
-        // Print the number of tracks found in the TOC
-        printf("Number of Tracks: %d\n", numTracks);
+        // Calculate progress
+        int totalSeconds = currentTrackTimeInSeconds; // Total track length in seconds
+        int currentSeconds = (decimalValues[min] * 60) + decimalValues[sec]; // Current track time in seconds
 
-        // Print the contents of the loc array
-        printf("Track Locations:\n");
-        for (int i = 0; i < numTracks; i++) { // Loop through the number of tracks
-            printf("Track %d: %d\n", i + 1, loc[i]); // Assuming loc contains integers or similar
+        // Calculate the number of filled segments based on the total length
+        int barLength = 37; // Length of the progress bar (37 dashes)
+        int filledLength = (totalSeconds > 0) ? (currentSeconds * barLength) / totalSeconds : 0; // Calculate filled segments
+
+        // Print filled and empty segments
+        for (int i = 0; i < filledLength; i++) {
+            FntPrint("=");
+        }
+        for (int i = filledLength; i < barLength; i++) {
+            FntPrint("-");
+        }
+        FntPrint("\n");
+        
+        // Has the track changed? grab new tracks value in seconds if so
+        static int hasTrackChanged = 0;
+        static int oldTrack = 0;
+
+        if (decimalValues[track] != 0) {   
+            if (hasTrackChanged == 0) {
+                oldTrack = decimalValues[track]; // old track now contains current track value
+                hasTrackChanged = 1;
+                calculateCurrentTrackLength(); // Grab the current track time in seconds
+            }
+        } 
+
+        if (oldTrack != decimalValues[track]) { // if oldTrack variable is not equal to the current track being played
+            hasTrackChanged = 0; // Now we can grab the new track's time in seconds
         }
     }
 
@@ -558,7 +730,6 @@
     {
 
       u_char CDDA = 1; // CDDA mode for CdlSetMode- requires pointer as mode parameter
-      CVECTOR fntColor;
    
       CdInit(); // Init extended CD system
       CdControlB (CdlSetmode, &CDDA, 0); // set CDDA playback mode
@@ -587,8 +758,7 @@
       PadInit(0); // Initialize pad.  Mode is always 0
       getTableOfContents(); // get TOC information from the CD
 
-      CdControlB (CdlPlay, (u_char *)&loc[1], 0);
-
+      CdControlB (CdlPlay, (u_char *)&loc[1], 0); // play track 1
 
         while (1) 
         {   
@@ -606,12 +776,9 @@
       /*
 
 add reverb on / off
-add mute/ demute
 add L/R balance
-add shuffle 
+add shuffle
 add volume level displays
-add forward / reverse
-accompanying background display editing
-find a way to move a bar (ascii) across the top graphic for a percent of song played
+accompanying background display editing (including shoulder buttons)
 
       */

@@ -28,3 +28,23 @@ TRACK 01 AUDIO
     INDEX 01 64:40:45
   TRACK 15 AUDIO
     INDEX 01 68:34:66
+
+
+From the output of the media player (using Orionsoft ps1usb which redirects printf to his device straight to the command line screen on PC)
+
+Total Time: 72:18
+Track 01 | 00:00
+Track 02 | 05:21
+Track 03 | 10:40
+Track 04 | 14:51
+Track 05 | 20:22
+Track 06 | 25:22
+Track 07 | 30:21
+Track 08 | 33:50
+Track 09 | 37:28
+Track 10 | 41:56
+Track 11 | 46:02
+Track 12 | 52:48
+Track 13 | 56:45
+Track 14 | 64:40
+Track 15 | 68:34
