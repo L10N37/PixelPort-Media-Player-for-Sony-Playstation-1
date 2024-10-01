@@ -34,7 +34,6 @@
     #include "common.h"
     // TIM image
     #include "background.h"
-#include "libcd.h"
     #include <stdio.h>
 
     #define OT_LENGTH 1                             // ordering table length
