@@ -34,6 +34,7 @@
     #include "common.h"
     // TIM image
     #include "background.h"
+#include "libcd.h"
     #include <stdio.h>
 
     #define OT_LENGTH 1                             // ordering table length
@@ -349,6 +350,7 @@
         
     }
 
+    void playerInformationLogic(); // function dec here so we can call it as its below this function, rearrange later and remove this
     void readControllerInput()
     {
     
@@ -359,7 +361,7 @@
     trackValue = decimalValues[track]; 
     
     //slow down the polling
-    if (debounceTimer%5 == 0)
+    if (debounceTimer%8 == 0)
     {                               
     pad = PadRead(0); // Read pads input. id is unused, always 0.
     }
@@ -471,6 +473,15 @@
             /////////////////////////////////////   
             case PADL1:
             CdControlF (CdlBackward, 0);
+            while (pad == PADL1)
+            {
+                pad = PadRead(0);        // Keep re-reading the pad to check for release of forward
+                printf("\nrewinding");
+                playerInformationLogic();   //keep updating the track information
+                display();                  // keep updating the display
+            }               
+            printf("\nrewind released");
+            CdControlF (CdlPlay, 0); // Resume play, button released
                 break;
             /////////////////////////////////////   
             case PADL2:
@@ -478,7 +489,16 @@
                 break;
             /////////////////////////////////////   
             case PADR1:
-            CdControlF (CdlForward, 0); 
+            CdControlF (CdlForward, 0);
+            while (pad == PADR1)
+            {
+                pad = PadRead(0); // Keep re-reading the pad to check for release of forward
+                printf("\nfast forward");
+                playerInformationLogic(); //keep updating the track information
+                display();                // keep updating the display
+            }               
+            printf("\nfast forward released");
+            CdControlF (CdlPlay, 0); // Resume play, button released
                 break;
             /////////////////////////////////////   
             case PADR2:
