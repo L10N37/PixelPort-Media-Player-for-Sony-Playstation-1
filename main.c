@@ -66,7 +66,6 @@
     int debounceTimer= 0;                // controller input debounce timer
     unsigned int currentTrackTimeInSeconds = 0;  // to hold current track time in seconds
     int shuffledTracks[101];    // Max tracks 100, for shuffle/ built in CdPlay function we need an extra element to contain zero (could have implemented shuffle manually though)
-    int tracksPlayed;
     int repeat = 1;                     //track if repeat mode is on (repeat the CD when finished), on by default
     
     // for readability when accessing decimalValues variable
