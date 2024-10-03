@@ -65,7 +65,10 @@
     int numTracks;                       // for storing number of audio tracks found on CD
     int debounceTimer= 0;                // controller input debounce timer
     unsigned int currentTrackTimeInSeconds = 0;  // to hold current track time in seconds
-
+    int shuffledTracks[101];    // Max tracks 100, for shuffle/ built in CdPlay function we need an extra element to contain zero (could have implemented shuffle manually though)
+    int tracksPlayed;
+    int repeat = 1;                     //track if repeat mode is on (repeat the CD when finished), on by default
+    
     // for readability when accessing decimalValues variable
         typedef enum {
         track,
@@ -84,29 +87,6 @@
                 int seconds;
     } TrackTime;
     
-    void seedRandom(CVECTOR *fntColor, CVECTOR *fntColorBG) {
-        long rootCounterValue = GetRCnt(0);  // Get the root counter value
-
-        // Check if GetRCnt succeeded
-        if (rootCounterValue != -1) {
-            srand((unsigned int)rootCounterValue);  // Seed the random number generator
-        } else {
-            printf("Error: Failed to get root counter value.\n");
-        }
-
-        // Initialize font color with random values between 0 and 255
-        fntColor->r = rand() % 256;  // Random red value
-        fntColor->g = rand() % 256;  // Random green value
-        fntColor->b = rand() % 256;  // Random blue value
-
-        // Initialize background color to black
-        fntColorBG->r = 0;
-        fntColorBG->g = 0;
-        fntColorBG->b = 0;
-
-    }
-
-
     void initFont()
     {
         static u_char fontColours[3] = {0x00, 0x00, 0x00};
@@ -350,6 +330,40 @@
         
     }
 
+    void shuffleFunction(int numTracks, int *shuffledTracks) {
+        long rootCounterValue = GetRCnt(0);  // Get the root counter value
+
+        if (rootCounterValue != -1) {
+            srand((unsigned int)rootCounterValue);  // Seed the random number generator
+        } else {
+            printf("Error: Failed to get root counter value.\n");
+            return; // Exit if seeding fails
+        }
+
+        // Start from index 1 to store track numbers
+        for (int i = 1; i <= numTracks; i++) { // Fill from index 1 to numTracks
+            int newTrack;
+            do {
+                newTrack = rand() % numTracks + 1; // Random value between 1 and numTracks
+            } while (isValueInArray(newTrack, shuffledTracks, i)); // Ensure unique values
+
+            shuffledTracks[i] = newTrack; // Store the unique value
+            printf("\nTrack Order: %d\n", shuffledTracks[i]);
+        }
+
+        shuffledTracks[0] = numTracks; // Store total track count in index 0
+        shuffledTracks[numTracks + 1] = 0; // Zero out the final array element (numTracks + 1)
+
+        // Call CdPlay with repeat or stop mode
+        if (repeat == 1) {
+            CdPlay(2, shuffledTracks, decimalValues[index]); // Play with repeat
+            printf("Shuffled tracks (repeat mode): 0x%02X\n", decimalValues[track]);
+        } else if (repeat == 0) {
+            CdPlay(1, shuffledTracks, decimalValues[index]); // Play and stop at the end
+            printf("Shuffled tracks (stop mode): 0x%02X\n", decimalValues[track]);
+        }
+    }
+
     void playerInformationLogic(); // function dec here so we can call it as its below this function, rearrange later and remove this
     void readControllerInput()
     {
@@ -361,7 +375,7 @@
     trackValue = decimalValues[track]; 
     
     //slow down the polling
-    if (debounceTimer%8 == 0)
+    if (debounceTimer%7 == 0)
     {                               
     pad = PadRead(0); // Read pads input. id is unused, always 0.
     }
@@ -398,8 +412,8 @@
                 {
                 trackValue++;
                 }
-                // else if last track, go back to track 1
-                if (trackValue == numTracks)
+                // else if last track, go back to track 1, as long as shuffle isn't on
+                if (trackValue == numTracks && shuffle == 0)
                 {
                 trackValue = 1;
                 }
@@ -410,24 +424,41 @@
             /////////////////////////////////////   
             case PADLleft: // Decrement the track with wrap around to final track
 
-                // if playing first track, go to final track
-                if (trackValue == 1)
+                // if playing first track, go to final track, if shuffle is off!
+                if (trackValue == 1 && shuffle == 0)
                 {
                 trackValue = numTracks;
+                CdControlF (CdlPlay, (u_char *)&loc[trackValue]);
                 }
                 // else decrement track value
-                else if (trackValue <= numTracks && trackValue != 1)
+                else if (trackValue <= numTracks && trackValue != 1 && shuffle == 0) //make sure shuffle isn't on
                 {
                 trackValue--;
-                }
-
                 CdControlF (CdlPlay, (u_char *)&loc[trackValue]);
+                }
                 printf("\nTrack value: %d\n", trackValue);
                 printf("\nLeft D-Pad pressed, decrement track"); 
                 break;
             /////////////////////////////////////      
             case PADRup:
-                       
+                if (shuffle == 0)
+                {
+                    
+                for (int i = 0; i < 101; i++) { // reset shuffledTracks array or locks up after turning on/off then on again
+                shuffledTracks[i] = 0;
+                }
+
+                CdControlF (CdlStop, 0); // smoother?
+                shuffleFunction(numTracks, shuffledTracks);
+                shuffle = 1;
+                }
+                else if (shuffle == 1) // turn off shuffle
+                {
+                shuffle = 0;
+                CdPlay(0, NULL, 0);
+                CdControlF (CdlPlay, (u_char *)&loc[trackValue]); //resume playing
+                VSync( 3 );
+                }
                 break;
             /////////////////////////////////////   
             case PADRdown: // Play/Pause
@@ -743,6 +774,22 @@
         if (oldTrack != decimalValues[track]) { // if oldTrack variable is not equal to the current track being played
             hasTrackChanged = 0; // Now we can grab the new track's time in seconds
         }
+/*
+        if (shuffle == 1) //shuffle was turned on, we need to control cdlPlay's next track selection manually
+        {
+            if (tracksPlayed != numTracks)
+            {
+            while (currentSeconds == currentTrackTimeInSeconds) {}; // Lock up/ wait here on the last second of the track unless its the last track in the shuffle array / playlist                                                 
+            u_char nextTrack = shuffledTracks[tracksPlayed+1];      // store our next track 
+            CdControlF (CdlPlay, (u_char *)&nextTrack+1);  // Play the next trackk   
+            }
+            if (tracksPlayed == numTracks)
+            {
+                while (currentSeconds == currentTrackTimeInSeconds){};  // Lock up/ wait here on the last second of the last track, then stop the CD                                     
+                CdControlF(CdlStop, 0);
+            }
+        }
+*/
     }
 
     int main()
@@ -792,12 +839,26 @@
       }
 
 
-      /*
+/*
 
 add reverb on / off
 add L/R balance
-add shuffle
 add volume level displays
+add repeat on/off
 accompanying background display editing (including shoulder buttons)
+add disc swapping
 
-      */
+p195 LibOver47.pdf
+
+Detecting a Swapped CD
+To see whether the CD has been replaced, the following two tests should be performed: (1) determine
+whether the cover has been opened; and (2) determine the spindle rotation. Either test can be performed
+using the CdlNop command.
+CdControlB( CdlNop, 0, result ); /* char result[ 8 ]; 
+1. The opening and closing of the cover is reflected in the CdlStatShellOpen bit of result[0]. The
+CdlStatShellOpen bit detects an open cover, and has the following settings:
+Cover is open: always 1
+Cover is closed: 1, the first time this condition is detected, 0 for subsequent times
+Thus, if this bit makes a transition from 1 to 0, it can be assumed that the CD has been swapped.
+2. Use the CdlNop command and wait for bit 1 of result [ 0 ] (0x02) to change to 1
+*/
