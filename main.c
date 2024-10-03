@@ -406,7 +406,7 @@
             case PADLright: // Increment the track with wrap around to first track
 
                 // Increment track value if not at last track
-                if (trackValue < numTracks)
+                if (trackValue < numTracks) // fix this, we can land on final track in shuffle mode but would still want to increment to next shuffled track
                 {
                 trackValue++;
                 }
