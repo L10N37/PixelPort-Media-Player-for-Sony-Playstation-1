@@ -34,7 +34,9 @@
     #include "common.h"
     // TIM image
     #include "background.h"
-    #include <stdio.h>
+    #include <stdbool.h>
+
+ 
 
     #define OT_LENGTH 1                             // ordering table length
     #define PACKETMAX (300)                         // the max num of objects
@@ -57,29 +59,17 @@
     CdlLOC loc[100];                    // Array to store locations of tracks
     u_char cdInfoGetlocp[8];
     int currentbuffer; // double buffer holder
-    int decimalValues[8];               // to hold decimal values from GETLOCP after conversion from BCD (uchar?)
+    int decimalValues[8] = {0x00};               // to hold decimal values from GETLOCP after conversion from BCD (uchar?)
     int CdVolume = MAX_VOLUME_CD;
     u_char shuffle = 0;
     u_char result[8];                    // general response storage
-    int numTracks;                       // for storing number of audio tracks found on CD
+    int numTracks = 0x00;                // for storing number of audio tracks found on CD
     int debounceTimer= 0;                // controller input debounce timer
     unsigned int currentTrackTimeInSeconds = 0;  // to hold current track time in seconds
     int shuffledTracks[101];    // Max tracks 100, for shuffle/ built in CdPlay function we need an extra element to contain zero (could have implemented shuffle manually though)
     int tracksPlayed;
     int repeat = 1;                     //track if repeat mode is on (repeat the CD when finished), on by default
     
-    // for readability when accessing decimalValues variable
-        typedef enum {
-        track,
-        index,
-        min,
-        sec,
-        frame,
-        amin,
-        asec,
-        aframe
-    } TrackInfoIndex;
-
     typedef struct 
     {
                 int mins;
@@ -329,7 +319,7 @@
         
     }
 
-    void shuffleFunction(int numTracks, int *shuffledTracks) {
+    void shuffleFunction() {
         long rootCounterValue = GetRCnt(0);  // Get the root counter value
 
         if (rootCounterValue != -1) {
@@ -440,7 +430,7 @@
                 break;
             /////////////////////////////////////      
             case PADRup:
-                if (shuffle == 0)
+                if (shuffle == false)
                 {
                     
                 for (int i = 0; i < 101; i++) { // reset shuffledTracks array or locks up after turning on/off then on again
@@ -449,28 +439,27 @@
 
                 CdControlF (CdlStop, 0); // smoother?
                 shuffleFunction(numTracks, shuffledTracks);
-                shuffle = 1;
+                shuffle = true;
                 }
-                else if (shuffle == 1) // turn off shuffle
+                else if (shuffle == true) // turn off shuffle
                 {
-                shuffle = 0;
+                shuffle = false;
                 CdPlay(0, NULL, 0);
                 CdControlF (CdlPlay, (u_char *)&loc[trackValue]); //resume playing
-                VSync( 3 );
                 }
                 break;
             /////////////////////////////////////   
             case PADRdown: // Play/Pause
 
-            static u_char pause = 0;
-            if (pause == 0) 
+            static bool pause = false;
+            if (pause == false) 
             {
             CdControlF (CdlPause, 0);
             pause = 1;
             printf("\nPAUSED");
             
             }
-            else if (pause == 1)
+            else if (pause == true)
             {
             CdControlF (CdlPlay, 0);
             pause = 0;
@@ -481,18 +470,18 @@
             /////////////////////////////////////   
             case PADRright: //Mute/ Demute
 
-            static u_char mute = 0;
-            if (mute == 0) 
+            static bool mute = false;
+            if (mute == false) 
             {
             CdControlF (CdlMute, 0);
             mute = 1;
             printf("\nAudio Muted");
             
             }
-            else if (mute == 1)
+            else if (mute == true)
             {
             CdControlF (CdlDemute, 0);
-            mute = 0;
+            mute = false;
             printf("\nAudio Demuted");
             }
             break;
@@ -503,10 +492,10 @@
             /////////////////////////////////////   
             case PADL1:
             CdControlF (CdlBackward, 0);
+            printf("\nrewinding");
             while (pad == PADL1)
             {
                 pad = PadRead(0);        // Keep re-reading the pad to check for release of forward
-                printf("\nrewinding");
                 playerInformationLogic();   //keep updating the track information
                 display();                  // keep updating the display
             }               
@@ -520,10 +509,10 @@
             /////////////////////////////////////   
             case PADR1:
             CdControlF (CdlForward, 0);
+            printf("\nfast forward");
             while (pad == PADR1)
             {
                 pad = PadRead(0); // Keep re-reading the pad to check for release of forward
-                printf("\nfast forward");
                 playerInformationLogic(); //keep updating the track information
                 display();                // keep updating the display
             }               
@@ -550,13 +539,7 @@
           
     void calculateCurrentTrackLength() {
             // Get the current track number
-            int currentTrack = decimalValues[track]; // Assuming this holds the current track number
-
-            // Validate current track number
-            if (currentTrack < 1 || currentTrack > numTracks) {
-                printf("Invalid current track: %d\n", currentTrack);
-                return;
-            }
+            u_char currentTrack = decimalValues[track]; // holds the current track number
 
             // Temporary variables for BCD values and decimal conversion
             unsigned char bcdValues[2];
@@ -624,26 +607,19 @@
             // Convert to total seconds
             currentTrackTimeInSeconds = (lengthMinutes * 60) + lengthSeconds;
 
-            // Print the current track length in seconds
+            // Positive integer is a track number; anything else is an error.
+            if (currentTrack > numTracks && lengthMinutes < 0)
+            {
             printf("Track %02d Length: %02d:%02d (%d seconds)\n", currentTrack, lengthMinutes, lengthSeconds, currentTrackTimeInSeconds);
+            }
         }
-
-        void getTableOfContents() {
+        
+        void getTableOfContents() { // check tools.c for gettoc in drive lid status function
 
             unsigned char bcdValues[2];
             int decimalValues[2];
             TrackTime trackStartTime[101]; // Array to hold track start times, including total time
             int trackLengths[101]; // Array to hold track lengths in seconds
-            
-            // Check drive lid status in case its open at launch of app, otherwise the while ((numTracks = CdGetToc(loc)) == 0) will halt the application launch until the drive lid is closed (blank screen), skip tocread if lid open
-            CdControlB( CdlNop, 0, result);         
-            if  (result[0] == NULL)                 
-                {                                   
-            while ((numTracks = CdGetToc(loc)) == 0)
-            {
-                FntPrint("No TOC found: please use CD-DA disc...\n");
-            }
-                }
 
             // Print total time
             bcdValues[0] = loc[0].minute; // Total time minutes
@@ -651,7 +627,7 @@
             convertBcdValuesToDecimal(bcdValues, decimalValues, 2);
             trackStartTime[0].mins = decimalValues[0];
             trackStartTime[0].seconds = decimalValues[1];
-            printf("Total Time: %02d:%02d\n\n", trackStartTime[0].mins, trackStartTime[0].seconds);
+            printf("\nTotal Time: %02d:%02d\n\n", trackStartTime[0].mins, trackStartTime[0].seconds);
 
             printf("Track starting positions:\n");
 
@@ -731,9 +707,20 @@
         CdControlB(CdlGetlocP, 0, currentValues);
         convertBcdValuesToDecimal(currentValues, decimalValues, 8); // convert return data from CdGetLocP from BCD to decimal
 
-        // Print the CURRENT track information
-        FntPrint("           %0d\n\n", numTracks); // Track Count main screen 
+        ////////////  check cdlNopStatusByte ////////////
+        CdControlB( CdlNop, 0, result);
+        ////////////////////////////////////////////////
+        //printf("\nCdlNop: %x", cdlNopStatusByte); //cdlNopStatusByte: 0
+
+        // Print the CURRENT track information if a disc is playing, otherwise zero them out
+        if (cdlNopStatusByte == CdlStatPlay + CdlStatStandby){
+        FntPrint("           %0d\n\n", numTracks);             // Track Count main screen 
         FntPrint("           %0d\n\n", decimalValues[track]); // Current Track main screen
+        }
+        else{
+        FntPrint("           %0d\n\n", 0);
+        FntPrint("           %0d\n\n", 0); 
+        }
 
         if (shuffle == 0) {
             FntPrint("           OFF\n\n"); // Shuffle on or off? main screen
@@ -764,8 +751,8 @@
         FntPrint("\n");
         
         // Has the track changed? grab new tracks value in seconds if so
-        static int hasTrackChanged = 0;
-        static int oldTrack = 0;
+        static bool hasTrackChanged = false;
+        static u_char oldTrack = 0;
 
         if (decimalValues[track] != 0) {   
             if (hasTrackChanged == 0) {
@@ -778,22 +765,6 @@
         if (oldTrack != decimalValues[track]) { // if oldTrack variable is not equal to the current track being played
             hasTrackChanged = 0; // Now we can grab the new track's time in seconds
         }
-/*
-        if (shuffle == 1) //shuffle was turned on, we need to control cdlPlay's next track selection manually
-        {
-            if (tracksPlayed != numTracks)
-            {
-            while (currentSeconds == currentTrackTimeInSeconds) {}; // Lock up/ wait here on the last second of the track unless its the last track in the shuffle array / playlist                                                 
-            u_char nextTrack = shuffledTracks[tracksPlayed+1];      // store our next track 
-            CdControlF (CdlPlay, (u_char *)&nextTrack+1);  // Play the next trackk   
-            }
-            if (tracksPlayed == numTracks)
-            {
-                while (currentSeconds == currentTrackTimeInSeconds){};  // Lock up/ wait here on the last second of the last track, then stop the CD                                     
-                CdControlF(CdlStop, 0);
-            }
-        }
-*/
     }
 
     int main()
@@ -802,10 +773,10 @@
       u_char CDDA = 1; // CDDA mode for CdlSetMode- requires pointer as mode parameter
    
       CdInit(); // Init extended CD system
-      CdControlB (CdlSetmode, &CDDA, 0); // set CDDA playback mode
       SpuInit(); //The proper order of initialization is CDInit(), then SpuInit()
-
-        /* p1042 LibRef47.pdf
+      CdControlF (CdlSetmode, &CDDA); // set CDDA playback mode
+        /* 
+        p1042 LibRef47.pdf
 
         Initializes SPU. Called only once within the program. After initialization, the state of the SPU is:
         • Master volume is 0 for both L/R
@@ -818,7 +789,6 @@
         • External digital input volume is 0 for both L/R
         • DMA transfer initialization set
         The status of the sound buffer is indeterminate after initialization.
-
         */
       initSpu(MAX_VOLUME_CD, MAX_VOLUME_MASTER); // now set the desired SPU settings
       ResetCallback(); // initialises all system callbacks
@@ -826,17 +796,14 @@
       initFont(); // initialise the psy-q debugging font
       initImage(); // initialise the TIM image
       PadInit(0); // Initialize pad.  Mode is always 0
-      getTableOfContents(); // get TOC information from the CD
-
-      CdControlF (CdlPlay, (u_char *)&loc[1]); // play track 1
 
         while (1) 
         {   
             initFont();
             playerInformationLogic();
             readControllerInput();
-            display();
-            checkDriveLidStatus();
+            checkDriveLidStatus(); // getToc called in here
+            display();  
         }
 
         ResetGraph(3); // set the video mode back
@@ -851,6 +818,4 @@ add L/R balance
 add volume level displays
 add repeat on/off
 accompanying background display editing (including shoulder buttons)
-
-p195 LibOver47.pdf
 */
