@@ -10,8 +10,9 @@
     #include <stdint.h> 
     #include <libsnd.h>
     
-    // to randomise font colour - not used, repurpose for randomise track
-    #include <rand.h>   
+    // random function
+    #include <rand.h> 
+      
     #include <libapi.h>  
 
     // CD library

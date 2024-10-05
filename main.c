@@ -65,6 +65,7 @@
     int debounceTimer= 0;                // controller input debounce timer
     unsigned int currentTrackTimeInSeconds = 0;  // to hold current track time in seconds
     int shuffledTracks[101];    // Max tracks 100, for shuffle/ built in CdPlay function we need an extra element to contain zero (could have implemented shuffle manually though)
+    int tracksPlayed;
     int repeat = 1;                     //track if repeat mode is on (repeat the CD when finished), on by default
     
     // for readability when accessing decimalValues variable
@@ -406,7 +407,7 @@
             case PADLright: // Increment the track with wrap around to first track
 
                 // Increment track value if not at last track
-                if (trackValue < numTracks) // fix this, we can land on final track in shuffle mode but would still want to increment to next shuffled track
+                if (trackValue < numTracks)
                 {
                 trackValue++;
                 }
@@ -634,10 +635,15 @@
             TrackTime trackStartTime[101]; // Array to hold track start times, including total time
             int trackLengths[101]; // Array to hold track lengths in seconds
             
-            while ((numTracks = CdGetToc(loc)) == 0) 
+            // Check drive lid status in case its open at launch of app, otherwise the while ((numTracks = CdGetToc(loc)) == 0) will halt the application launch until the drive lid is closed (blank screen), skip tocread if lid open
+            CdControlB( CdlNop, 0, result);         
+            if  (result[0] == NULL)                 
+                {                                   
+            while ((numTracks = CdGetToc(loc)) == 0)
             {
                 FntPrint("No TOC found: please use CD-DA disc...\n");
             }
+                }
 
             // Print total time
             bcdValues[0] = loc[0].minute; // Total time minutes
@@ -822,7 +828,7 @@
       PadInit(0); // Initialize pad.  Mode is always 0
       getTableOfContents(); // get TOC information from the CD
 
-      CdControlB (CdlPlay, (u_char *)&loc[1], 0); // play track 1
+      CdControlF (CdlPlay, (u_char *)&loc[1]); // play track 1
 
         while (1) 
         {   
@@ -830,6 +836,7 @@
             playerInformationLogic();
             readControllerInput();
             display();
+            checkDriveLidStatus();
         }
 
         ResetGraph(3); // set the video mode back
@@ -838,25 +845,12 @@
 
 
 /*
-
+add manual shuffle selection to choose custom track order (as opposed to randomly generated)
 add reverb on / off
 add L/R balance
 add volume level displays
 add repeat on/off
 accompanying background display editing (including shoulder buttons)
-add disc swapping
 
 p195 LibOver47.pdf
-
-Detecting a Swapped CD
-To see whether the CD has been replaced, the following two tests should be performed: (1) determine
-whether the cover has been opened; and (2) determine the spindle rotation. Either test can be performed
-using the CdlNop command.
-CdControlB( CdlNop, 0, result ); /* char result[ 8 ]; 
-1. The opening and closing of the cover is reflected in the CdlStatShellOpen bit of result[0]. The
-CdlStatShellOpen bit detects an open cover, and has the following settings:
-Cover is open: always 1
-Cover is closed: 1, the first time this condition is detected, 0 for subsequent times
-Thus, if this bit makes a transition from 1 to 0, it can be assumed that the CD has been swapped.
-2. Use the CdlNop command and wait for bit 1 of result [ 0 ] (0x02) to change to 1
 */

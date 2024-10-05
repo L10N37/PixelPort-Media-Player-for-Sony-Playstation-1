@@ -8,10 +8,18 @@ third_party/psyq/lib\libc.a(c48.o)
                               main.o (srand)
 third_party/psyq/lib\libc.a(c63.o)
                               main.o (printf)
+third_party/psyq/lib\libcd.a(cdplay.o)
+                              main.o (CdPlay)
 third_party/psyq/lib\libcd.a(event.o)
                               main.o (CdInit)
+third_party/psyq/lib\libcd.a(s_011.o)
+                              third_party/psyq/lib\libcd.a(cdplay.o) (CdIntstr)
+third_party/psyq/lib\libcd.a(s_012.o)
+                              third_party/psyq/lib\libcd.a(cdplay.o) (CdSync)
+third_party/psyq/lib\libcd.a(s_015.o)
+                              third_party/psyq/lib\libcd.a(cdplay.o) (CdReadyCallback)
 third_party/psyq/lib\libcd.a(s_016.o)
-                              main.o (CdControlB)
+                              third_party/psyq/lib\libcd.a(cdplay.o) (CdControl)
 third_party/psyq/lib\libcd.a(toc.o)
                               main.o (CdGetToc)
 third_party/psyq/lib\libcd.a(bios_1.o)
@@ -205,11 +213,8 @@ Discarded input sections
  .MIPS.abiflags
                 0x0000000000000000       0x18 main.o
  .pdr           0x0000000000000000      0x1a0 main.o
- .rodata.seedRandom.str1.4
-                0x0000000000000000       0x2a main.o
- .text.seedRandom
-                0x0000000000000000       0xc0 main.o
- .sbss.result   0x0000000000000000        0x8 main.o
+ .sbss.tracksPlayed
+                0x0000000000000000        0x4 main.o
  .sbss.cdInfoGetlocp
                 0x0000000000000000        0x8 main.o
  .sbss.image1_addr
@@ -219,10 +224,7 @@ Discarded input sections
  .reginfo       0x0000000000000000       0x18 tools.o
  .MIPS.abiflags
                 0x0000000000000000       0x18 tools.o
- .pdr           0x0000000000000000       0x60 tools.o
- .text          0x0000000000000000      0x170 third_party/psyq/lib\libapi.a(counter.o)
- .text          0x0000000000000000       0x10 third_party/psyq/lib\libc.a(c47.o)
- .text          0x0000000000000000       0x10 third_party/psyq/lib\libc.a(c48.o)
+ .pdr           0x0000000000000000       0xa0 tools.o
  .text          0x0000000000000000       0x80 third_party/psyq/lib\libgs.a(gs_104.o)
  .text          0x0000000000000000      0x570 third_party/psyq/lib\libgs.a(gs_107.o)
  .text          0x0000000000000000       0x90 third_party/psyq/lib\libgte.a(msc01.o)
@@ -265,15 +267,15 @@ LOAD third_party/psyq/lib\libsnd.a
 LOAD third_party/psyq/lib\libspu.a
 LOAD third_party/psyq/lib\libtap.a
 END GROUP
-                0x000000008004d3b0                __heap_base = __bss_end
+                0x000000008004e6f0                __heap_base = __bss_end
                 0x0000000080010000                TLOAD_ADDR = DEFINED (TLOAD_ADDR)?TLOAD_ADDR:0x80010000
                 0x0000000080200000                __ram_top = (ORIGIN (ram) + LENGTH (ram))
                 0x00000000801fff00                __sp = (__ram_top - 0x100)
                 0x000000001f800000                __dcache = ORIGIN (dcache)
                 0x000000001f800400                __dcache_top = (ORIGIN (dcache) + LENGTH (dcache))
-                0x00000000000063b0                __bss_len = (__bss_end - __bss_start)
-                0x000000000000a3d0                __ftext_len = (__ftext_end - __ftext_start)
-                0x000000000002cc30                __fdata_len = (__fdata_end - __fdata_start)
+                0x00000000000066f0                __bss_len = (__bss_end - __bss_start)
+                0x000000000000af10                __ftext_len = (__ftext_end - __ftext_start)
+                0x000000000002d0f0                __fdata_len = (__fdata_end - __fdata_start)
                 0x0000000080200000                __stack_start = (ORIGIN (ram) + LENGTH (ram))
 
 .PSX_EXE_Header
@@ -291,7 +293,7 @@ END GROUP
                 0x000000008000f810        0x4 LONG 0x80010000 ABSOLUTE (_start)
                 0x000000008000f814        0x4 LONG 0x0
                 0x000000008000f818        0x4 LONG 0x80010000 TLOAD_ADDR
-                0x000000008000f81c        0x4 LONG 0x37000 (__ftext_len + __fdata_len)
+                0x000000008000f81c        0x4 LONG 0x38000 (__ftext_len + __fdata_len)
                 0x000000008000f820        0x4 LONG 0x0
                 0x000000008000f824        0x4 LONG 0x0
                 0x000000008000f828        0x4 LONG 0x0
@@ -302,7 +304,7 @@ END GROUP
  *fill*         0x000000008000f838      0x7c8 
                 0x0000000080010000                __ftext_start = ABSOLUTE (.)
 
-.text           0x0000000080010000     0xa3d0
+.text           0x0000000080010000     0xaf10
  *(.start)
  .start         0x0000000080010000       0x64 third_party/nugget/common/crt0/crt0.o
                 0x0000000080010000                _start
@@ -312,592 +314,635 @@ END GROUP
  *(.text.exit .text.exit.*)
  *(.text.startup .text.startup.*)
  .text.startup.main
-                0x0000000080010064       0xa4 main.o
+                0x0000000080010064       0xa8 main.o
                 0x0000000080010064                main
  *(.text.hot .text.hot.*)
  *(.text .stub .text.* .gnu.linkonce.t.*)
  .text.initFont
-                0x0000000080010108      0x128 main.o
-                0x0000000080010108                initFont
+                0x000000008001010c      0x128 main.o
+                0x000000008001010c                initFont
  .text.clearVRAM
-                0x0000000080010230       0x50 main.o
-                0x0000000080010230                clearVRAM
+                0x0000000080010234       0x50 main.o
+                0x0000000080010234                clearVRAM
  .text.initGraphics
-                0x0000000080010280      0x130 main.o
-                0x0000000080010280                initGraphics
+                0x0000000080010284      0x130 main.o
+                0x0000000080010284                initGraphics
  .text.initImage
-                0x00000000800103b0      0x14c main.o
-                0x00000000800103b0                initImage
- .text.display  0x00000000800104fc      0x114 main.o
-                0x00000000800104fc                display
+                0x00000000800103b4      0x14c main.o
+                0x00000000800103b4                initImage
+ .text.display  0x0000000080010500      0x114 main.o
+                0x0000000080010500                display
  .text.printSpu
-                0x0000000080010610       0x60 main.o
-                0x0000000080010610                printSpu
- .text.initSpu  0x0000000080010670       0x48 main.o
-                0x0000000080010670                initSpu
- .text.readControllerInput
-                0x00000000800106b8      0x2e8 main.o
-                0x00000000800106b8                readControllerInput
+                0x0000000080010614       0x60 main.o
+                0x0000000080010614                printSpu
+ .text.initSpu  0x0000000080010674       0x48 main.o
+                0x0000000080010674                initSpu
+ .text.shuffleFunction
+                0x00000000800106bc      0x17c main.o
+                0x00000000800106bc                shuffleFunction
  .text.calculateCurrentTrackLength
-                0x00000000800109a0      0x200 main.o
-                0x00000000800109a0                calculateCurrentTrackLength
+                0x0000000080010838      0x200 main.o
+                0x0000000080010838                calculateCurrentTrackLength
  .text.getTableOfContents
-                0x0000000080010ba0      0x260 main.o
-                0x0000000080010ba0                getTableOfContents
+                0x0000000080010a38      0x27c main.o
+                0x0000000080010a38                getTableOfContents
  .text.playerInformationLogic
-                0x0000000080010e00      0x1d4 main.o
-                0x0000000080010e00                playerInformationLogic
+                0x0000000080010cb4      0x1d4 main.o
+                0x0000000080010cb4                playerInformationLogic
+ .text.readControllerInput
+                0x0000000080010e88      0x47c main.o
+                0x0000000080010e88                readControllerInput
  .text.FntColor
-                0x0000000080010fd4       0x74 tools.o
-                0x0000000080010fd4                FntColor
+                0x0000000080011304       0x74 tools.o
+                0x0000000080011304                FntColor
  .text.bcdToDecimal
-                0x0000000080011048       0x1c tools.o
-                0x0000000080011048                bcdToDecimal
+                0x0000000080011378       0x1c tools.o
+                0x0000000080011378                bcdToDecimal
  .text.convertBcdValuesToDecimal
-                0x0000000080011064       0x5c tools.o
-                0x0000000080011064                convertBcdValuesToDecimal
- .text          0x00000000800110c0       0x10 third_party/psyq/lib\libc.a(c63.o)
-                0x00000000800110c0                printf
- .text          0x00000000800110d0      0x150 third_party/psyq/lib\libcd.a(event.o)
-                0x00000000800110d0                CdInit
- .text          0x0000000080011220      0x3c0 third_party/psyq/lib\libcd.a(s_016.o)
-                0x0000000080011220                CdControl
-                0x000000008001135c                CdControlF
-                0x0000000080011490                CdControlB
- .text          0x00000000800115e0      0x250 third_party/psyq/lib\libcd.a(toc.o)
-                0x00000000800115e0                CdGetToc
-                0x0000000080011604                CdGetToc2
- .text          0x0000000080011830     0x1580 third_party/psyq/lib\libcd.a(bios_1.o)
-                0x0000000080011d94                CD_sync
-                0x0000000080012014                CD_ready
-                0x00000000800122dc                CD_cw
-                0x00000000800126e8                CD_vol
-                0x0000000080012770                CD_flush
-                0x0000000080012844                CD_initvol
-                0x0000000080012934                CD_initintr
-                0x0000000080012980                CD_init
-                0x0000000080012b60                CD_datasync
-                0x0000000080012cc8                CD_set_test_parmnum
- .text          0x0000000080012db0       0x20 third_party/psyq/lib\libcd.a(s_014.o)
-                0x0000000080012db0                CdSyncCallback
- .text          0x0000000080012dd0      0x6c0 third_party/psyq/lib\libetc.a(intr.o)
-                0x0000000080012dd0                ResetCallback
-                0x0000000080012e00                InterruptCallback
-                0x0000000080012e30                DMACallback
-                0x0000000080012e60                VSyncCallback
-                0x0000000080012e94                VSyncCallbacks
-                0x0000000080012ec4                StopCallback
-                0x0000000080012ef4                RestartCallback
-                0x0000000080012f24                CheckCallback
-                0x0000000080012f34                GetIntrMask
-                0x0000000080012f4c                SetIntrMask
- .text          0x0000000080013490      0x2a0 third_party/psyq/lib\libetc.a(intr_dma.o)
-                0x0000000080013490                startIntrDMA
- .text          0x0000000080013730      0x120 third_party/psyq/lib\libetc.a(intr_vb.o)
-                0x0000000080013730                startIntrVSync
- .text          0x0000000080013850       0x80 third_party/psyq/lib\libetc.a(pad.o)
-                0x0000000080013850                PadInit
-                0x000000008001389c                PadRead
- .text          0x00000000800138d0       0x30 third_party/psyq/lib\libetc.a(vmode.o)
-                0x00000000800138d0                SetVideoMode
-                0x00000000800138e4                GetVideoMode
- .text          0x0000000080013900      0x210 third_party/psyq/lib\libetc.a(vsync.o)
-                0x0000000080013900                VSync
- .text          0x0000000080013b10      0xa80 third_party/psyq/lib\libgpu.a(font.o)
-                0x0000000080013b10                SetDumpFnt
-                0x0000000080013b50                FntLoad
-                0x0000000080013bf0                FntOpen
-                0x0000000080013eac                FntFlush
-                0x00000000800141c8                FntPrint
- .text          0x0000000080014590       0x40 third_party/psyq/lib\libgpu.a(p00.o)
-                0x0000000080014590                GetTPage
- .text          0x00000000800145d0       0x40 third_party/psyq/lib\libgpu.a(p06.o)
-                0x00000000800145d0                AddPrim
- .text          0x0000000080014610       0x20 third_party/psyq/lib\libgpu.a(p09.o)
-                0x0000000080014610                TermPrim
- .text          0x0000000080014630       0x30 third_party/psyq/lib\libgpu.a(p10.o)
-                0x0000000080014630                SetSemiTrans
- .text          0x0000000080014660       0x20 third_party/psyq/lib\libgpu.a(p20.o)
-                0x0000000080014660                SetSprt8
- .text          0x0000000080014680       0x20 third_party/psyq/lib\libgpu.a(p26.o)
-                0x0000000080014680                SetTile
- .text          0x00000000800146a0       0xa0 third_party/psyq/lib\libgpu.a(p41.o)
-                0x00000000800146a0                SetDrawMode
- .text          0x0000000080014740     0x2f00 third_party/psyq/lib\libgpu.a(sys.o)
-                0x0000000080014740                ResetGraph
-                0x00000000800148b4                SetGraphDebug
-                0x0000000080014910                SetGraphQueue
-                0x00000000800149b4                GetGraphDebug
-                0x00000000800149c4                DrawSyncCallback
-                0x0000000080014a24                SetDispMask
-                0x0000000080014abc                DrawSync
-                0x0000000080014c40                ClearImage
-                0x0000000080014cd0                ClearImage2
-                0x0000000080014d68                LoadImage
-                0x0000000080014dc8                StoreImage
-                0x0000000080014e28                MoveImage
-                0x0000000080014ee0                ClearOTag
-                0x0000000080014fa8                ClearOTagR
-                0x0000000080015054                DrawPrim
-                0x00000000800150b0                DrawOTag
-                0x0000000080015120                PutDrawEnv
-                0x00000000800151e0                DrawOTagEnv
-                0x00000000800152b8                GetDrawEnv
-                0x00000000800152ec                PutDispEnv
-                0x00000000800157e4                GetDispEnv
-                0x0000000080015818                GetODE
-                0x0000000080015848                SetDrawArea
-                0x00000000800158c8                SetDrawOffset
-                0x0000000080015908                SetDrawEnv
-                0x00000000800171d8                LoadImage2
-                0x00000000800172c4                StoreImage2
-                0x00000000800173b0                MoveImage2
-                0x00000000800174f4                DrawOTag2
-                0x00000000800175f0                _GPU_ResetCallback
- .text          0x0000000080017640       0xf0 third_party/psyq/lib\libgpu.a(e00.o)
-                0x0000000080017640                LoadTPage
- .text          0x0000000080017730       0x70 third_party/psyq/lib\libgpu.a(e02.o)
-                0x0000000080017730                LoadClut2
- .text          0x00000000800177a0       0x20 third_party/psyq/lib\libgpu.a(p01.o)
-                0x00000000800177a0                GetClut
- .text          0x00000000800177c0      0x500 third_party/psyq/lib\libgs.a(2d_sp0.o)
-                0x00000000800177c0                GsSortSprite
- .text          0x0000000080017cc0      0x550 third_party/psyq/lib\libgs.a(gs_001.o)
-                0x0000000080017cc0                GsInitGraph
-                0x0000000080017e50                GsInitGraph2
-                0x00000000800180d8                GsSortClear
- .text          0x0000000080018210       0x10 third_party/psyq/lib\libgs.a(gs_0021.o)
-                0x0000000080018210                GsGetActiveBuff
- .text          0x0000000080018220      0x110 third_party/psyq/lib\libgs.a(gs_0022.o)
-                0x0000000080018220                GsSetDrawBuffOffset
- .text          0x0000000080018330       0x80 third_party/psyq/lib\libgs.a(gs_003.o)
-                0x0000000080018330                GsSetDrawBuffClip
- .text          0x00000000800183b0       0xb0 third_party/psyq/lib\libgs.a(gs_010.o)
-                0x00000000800183b0                GsSwapDispBuff
- .text          0x0000000080018460       0xa0 third_party/psyq/lib\libgs.a(gs_103.o)
-                0x0000000080018460                GsDefDispBuff
- .text          0x0000000080018500       0x30 third_party/psyq/lib\libgs.a(gs_111.o)
-                0x0000000080018500                GsDrawOt
- .text          0x0000000080018530       0x60 third_party/psyq/lib\libgs.a(gs_113.o)
-                0x0000000080018530                GsClearOt
- .text          0x0000000080018590       0x50 third_party/psyq/lib\libgs.a(gs_121.o)
-                0x0000000080018590                gte_init
- .text          0x00000000800185e0       0xf0 third_party/psyq/lib\libgs.a(gs_122.o)
-                0x00000000800185e0                GsGetTimInfo
- .text          0x00000000800186d0       0x10 third_party/psyq/lib\libgs.a(gs_124.o)
-                0x00000000800186d0                GsSetWorkBase
- .text          0x00000000800186e0       0xa0 third_party/psyq/lib\libgs.a(2d_com1.o)
-                0x00000000800186e0                _make_packet
- .text          0x0000000080018780       0x80 third_party/psyq/lib\libgte.a(cmb_00.o)
-                0x0000000080018780                RotTransPers4
- .text          0x0000000080018800      0x290 third_party/psyq/lib\libgte.a(fgo_01.o)
-                0x0000000080018800                RotMatrix
- .text          0x0000000080018a90       0x90 third_party/psyq/lib\libgte.a(msc00.o)
-                0x0000000080018a98                InitGeom
- .text          0x0000000080018b20       0x30 third_party/psyq/lib\libgte.a(mtx_07.o)
-                0x0000000080018b20                TransMatrix
- .text          0x0000000080018b50      0x140 third_party/psyq/lib\libgte.a(mtx_08.o)
-                0x0000000080018b50                ScaleMatrix
- .text          0x0000000080018c90       0x30 third_party/psyq/lib\libgte.a(mtx_09.o)
-                0x0000000080018c90                SetRotMatrix
- .text          0x0000000080018cc0       0x20 third_party/psyq/lib\libgte.a(mtx_12.o)
-                0x0000000080018cc0                SetTransMatrix
- .text          0x0000000080018ce0       0xe0 third_party/psyq/lib\libgte.a(patchgte.o)
-                0x0000000080018ce0                _patch_gte
- .text          0x0000000080018dc0       0x10 third_party/psyq/lib\libgte.a(reg09.o)
-                0x0000000080018dc0                ReadGeomScreen
- .text          0x0000000080018dd0       0x20 third_party/psyq/lib\libgte.a(reg11.o)
-                0x0000000080018dd0                SetFarColor
- .text          0x0000000080018df0       0x20 third_party/psyq/lib\libgte.a(reg12.o)
-                0x0000000080018df0                SetGeomOffset
- .text          0x0000000080018e10      0x310 third_party/psyq/lib\libspu.a(s_gca.o)
-                0x0000000080018e10                SpuGetCommonAttr
- .text          0x0000000080019120       0x20 third_party/psyq/lib\libspu.a(s_i.o)
-                0x0000000080019120                SpuInit
- .text          0x0000000080019140      0x160 third_party/psyq/lib\libspu.a(s_ini.o)
-                0x0000000080019140                _SpuInit
-                0x0000000080019228                SpuStart
- .text          0x00000000800192a0       0x40 third_party/psyq/lib\libspu.a(s_sccm.o)
-                0x00000000800192a0                SpuSetCommonCDMix
- .text          0x00000000800192e0       0x20 third_party/psyq/lib\libspu.a(s_sccv.o)
-                0x00000000800192e0                SpuSetCommonCDVolume
- .text          0x0000000080019300       0x20 third_party/psyq/lib\libspu.a(s_scmv.o)
-                0x0000000080019300                SpuSetCommonMasterVolume
- .text          0x0000000080019320      0xb40 third_party/psyq/lib\libspu.a(spu.o)
-                0x0000000080019320                _spu_init
-                0x0000000080019760                _spu_FiDMA
-                0x000000008001981c                _spu_Fr_
-                0x00000000800198c4                _spu_t
-                0x0000000080019b44                _spu_Fw
-                0x0000000080019bc8                _spu_Fr
-                0x0000000080019c2c                _spu_FsetRXX
-                0x0000000080019c70                _spu_FsetRXXa
-                0x0000000080019d14                _spu_FgetRXXa
-                0x0000000080019d50                _spu_FsetPCR
-                0x0000000080019df8                _spu_Fw1ts
- .text          0x0000000080019e60       0x30 third_party/psyq/lib\libspu.a(s_dcb.o)
-                0x0000000080019e60                _SpuDataCallback
- .text          0x0000000080019e90       0x10 third_party/psyq/lib\libapi.a(a07.o)
-                0x0000000080019e90                DeliverEvent
- .text          0x0000000080019ea0       0x10 third_party/psyq/lib\libapi.a(a08.o)
-                0x0000000080019ea0                OpenEvent
- .text          0x0000000080019eb0       0x10 third_party/psyq/lib\libapi.a(a12.o)
-                0x0000000080019eb0                EnableEvent
- .text          0x0000000080019ec0       0x10 third_party/psyq/lib\libapi.a(a22.o)
-                0x0000000080019ec0                PAD_dr
- .text          0x0000000080019ed0       0x10 third_party/psyq/lib\libapi.a(a23.o)
-                0x0000000080019ed0                ReturnFromException
- .text          0x0000000080019ee0       0x10 third_party/psyq/lib\libapi.a(a24.o)
-                0x0000000080019ee0                ResetEntryInt
- .text          0x0000000080019ef0       0x10 third_party/psyq/lib\libapi.a(a25.o)
-                0x0000000080019ef0                HookEntryInt
- .text          0x0000000080019f00       0x10 third_party/psyq/lib\libapi.a(a36.o)
-                0x0000000080019f00                EnterCriticalSection
- .text          0x0000000080019f10       0x10 third_party/psyq/lib\libapi.a(a37.o)
-                0x0000000080019f10                ExitCriticalSection
- .text          0x0000000080019f20       0x10 third_party/psyq/lib\libapi.a(a91.o)
-                0x0000000080019f20                ChangeClearPAD
- .text          0x0000000080019f30       0x20 third_party/psyq/lib\libapi.a(c114.o)
-                0x0000000080019f38                _96_remove
- .text          0x0000000080019f50       0x10 third_party/psyq/lib\libapi.a(c68.o)
-                0x0000000080019f50                FlushCache
- .text          0x0000000080019f60       0x10 third_party/psyq/lib\libapi.a(c73.o)
-                0x0000000080019f60                GPU_cw
- .text          0x0000000080019f70       0x10 third_party/psyq/lib\libapi.a(l10.o)
-                0x0000000080019f70                ChangeClearRCnt
- .text          0x0000000080019f80      0x290 third_party/psyq/lib\libapi.a(pad.o)
-                0x0000000080019f80                SetInitPadFlag
-                0x0000000080019f8c                ReadInitPadFlag
-                0x0000000080019f9c                PAD_init
-                0x000000008001a02c                InitPAD
-                0x000000008001a0bc                StartPAD
- .text          0x000000008001a210       0xa0 third_party/psyq/lib\libapi.a(patch.o)
-                0x000000008001a210                EnablePAD
-                0x000000008001a224                DisablePAD
-                0x000000008001a238                _patch_pad
- .text          0x000000008001a2b0       0x10 third_party/psyq/lib\libapi.a(a18.o)
-                0x000000008001a2b0                InitPAD2
- .text          0x000000008001a2c0       0x10 third_party/psyq/lib\libapi.a(a19.o)
-                0x000000008001a2c0                StartPAD2
- .text          0x000000008001a2d0       0x10 third_party/psyq/lib\libapi.a(a21.o)
-                0x000000008001a2d0                PAD_init2
- .text          0x000000008001a2e0       0x70 third_party/psyq/lib\libapi.a(chclrpad.o)
-                0x000000008001a2e0                _remove_ChgclrPAD
- .text          0x000000008001a350       0x10 third_party/psyq/lib\libapi.a(l02.o)
-                0x000000008001a350                SysEnqIntRP
- .text          0x000000008001a360       0x10 third_party/psyq/lib\libapi.a(l03.o)
-                0x000000008001a360                SysDeqIntRP
- .text          0x000000008001a370       0x20 third_party/psyq/lib\libc.a(a63.o)
-                0x000000008001a378                puts
- .text          0x000000008001a390       0x10 third_party/psyq/lib\libc.a(c19.o)
-                0x000000008001a390                setjmp
- .text          0x000000008001a3a0       0x10 third_party/psyq/lib\libc.a(c27.o)
-                0x000000008001a3a0                strlen
- .text          0x000000008001a3b0       0x10 third_party/psyq/lib\libc.a(c42.o)
-                0x000000008001a3b0                memcpy
- .text          0x000000008001a3c0       0x10 third_party/psyq/lib\libc.a(c43.o)
-                0x000000008001a3c0                memset
-                0x000000008001a3d0                . = ALIGN (0x10)
+                0x0000000080011394       0x5c tools.o
+                0x0000000080011394                convertBcdValuesToDecimal
+ .text.isValueInArray
+                0x00000000800113f0       0x3c tools.o
+                0x00000000800113f0                isValueInArray
+ .text.checkDriveLidStatus
+                0x000000008001142c       0x64 tools.o
+                0x000000008001142c                checkDriveLidStatus
+ .text          0x0000000080011490      0x170 third_party/psyq/lib\libapi.a(counter.o)
+                0x0000000080011490                SetRCnt
+                0x000000008001152c                GetRCnt
+                0x0000000080011564                StartRCnt
+                0x0000000080011594                StopRCnt
+                0x00000000800115c8                ResetRCnt
+ .text          0x0000000080011600       0x10 third_party/psyq/lib\libc.a(c47.o)
+                0x0000000080011600                rand
+ .text          0x0000000080011610       0x10 third_party/psyq/lib\libc.a(c48.o)
+                0x0000000080011610                srand
+ .text          0x0000000080011620       0x10 third_party/psyq/lib\libc.a(c63.o)
+                0x0000000080011620                printf
+ .text          0x0000000080011630      0x560 third_party/psyq/lib\libcd.a(cdplay.o)
+                0x0000000080011630                CdPlay
+ .text          0x0000000080011b90      0x150 third_party/psyq/lib\libcd.a(event.o)
+                0x0000000080011b90                CdInit
+ .text          0x0000000080011ce0       0x40 third_party/psyq/lib\libcd.a(s_011.o)
+                0x0000000080011ce0                CdIntstr
+ .text          0x0000000080011d20       0x20 third_party/psyq/lib\libcd.a(s_012.o)
+                0x0000000080011d20                CdSync
+ .text          0x0000000080011d40       0x20 third_party/psyq/lib\libcd.a(s_015.o)
+                0x0000000080011d40                CdReadyCallback
+ .text          0x0000000080011d60      0x3c0 third_party/psyq/lib\libcd.a(s_016.o)
+                0x0000000080011d60                CdControl
+                0x0000000080011e9c                CdControlF
+                0x0000000080011fd0                CdControlB
+ .text          0x0000000080012120      0x250 third_party/psyq/lib\libcd.a(toc.o)
+                0x0000000080012120                CdGetToc
+                0x0000000080012144                CdGetToc2
+ .text          0x0000000080012370     0x1580 third_party/psyq/lib\libcd.a(bios_1.o)
+                0x00000000800128d4                CD_sync
+                0x0000000080012b54                CD_ready
+                0x0000000080012e1c                CD_cw
+                0x0000000080013228                CD_vol
+                0x00000000800132b0                CD_flush
+                0x0000000080013384                CD_initvol
+                0x0000000080013474                CD_initintr
+                0x00000000800134c0                CD_init
+                0x00000000800136a0                CD_datasync
+                0x0000000080013808                CD_set_test_parmnum
+ .text          0x00000000800138f0       0x20 third_party/psyq/lib\libcd.a(s_014.o)
+                0x00000000800138f0                CdSyncCallback
+ .text          0x0000000080013910      0x6c0 third_party/psyq/lib\libetc.a(intr.o)
+                0x0000000080013910                ResetCallback
+                0x0000000080013940                InterruptCallback
+                0x0000000080013970                DMACallback
+                0x00000000800139a0                VSyncCallback
+                0x00000000800139d4                VSyncCallbacks
+                0x0000000080013a04                StopCallback
+                0x0000000080013a34                RestartCallback
+                0x0000000080013a64                CheckCallback
+                0x0000000080013a74                GetIntrMask
+                0x0000000080013a8c                SetIntrMask
+ .text          0x0000000080013fd0      0x2a0 third_party/psyq/lib\libetc.a(intr_dma.o)
+                0x0000000080013fd0                startIntrDMA
+ .text          0x0000000080014270      0x120 third_party/psyq/lib\libetc.a(intr_vb.o)
+                0x0000000080014270                startIntrVSync
+ .text          0x0000000080014390       0x80 third_party/psyq/lib\libetc.a(pad.o)
+                0x0000000080014390                PadInit
+                0x00000000800143dc                PadRead
+ .text          0x0000000080014410       0x30 third_party/psyq/lib\libetc.a(vmode.o)
+                0x0000000080014410                SetVideoMode
+                0x0000000080014424                GetVideoMode
+ .text          0x0000000080014440      0x210 third_party/psyq/lib\libetc.a(vsync.o)
+                0x0000000080014440                VSync
+ .text          0x0000000080014650      0xa80 third_party/psyq/lib\libgpu.a(font.o)
+                0x0000000080014650                SetDumpFnt
+                0x0000000080014690                FntLoad
+                0x0000000080014730                FntOpen
+                0x00000000800149ec                FntFlush
+                0x0000000080014d08                FntPrint
+ .text          0x00000000800150d0       0x40 third_party/psyq/lib\libgpu.a(p00.o)
+                0x00000000800150d0                GetTPage
+ .text          0x0000000080015110       0x40 third_party/psyq/lib\libgpu.a(p06.o)
+                0x0000000080015110                AddPrim
+ .text          0x0000000080015150       0x20 third_party/psyq/lib\libgpu.a(p09.o)
+                0x0000000080015150                TermPrim
+ .text          0x0000000080015170       0x30 third_party/psyq/lib\libgpu.a(p10.o)
+                0x0000000080015170                SetSemiTrans
+ .text          0x00000000800151a0       0x20 third_party/psyq/lib\libgpu.a(p20.o)
+                0x00000000800151a0                SetSprt8
+ .text          0x00000000800151c0       0x20 third_party/psyq/lib\libgpu.a(p26.o)
+                0x00000000800151c0                SetTile
+ .text          0x00000000800151e0       0xa0 third_party/psyq/lib\libgpu.a(p41.o)
+                0x00000000800151e0                SetDrawMode
+ .text          0x0000000080015280     0x2f00 third_party/psyq/lib\libgpu.a(sys.o)
+                0x0000000080015280                ResetGraph
+                0x00000000800153f4                SetGraphDebug
+                0x0000000080015450                SetGraphQueue
+                0x00000000800154f4                GetGraphDebug
+                0x0000000080015504                DrawSyncCallback
+                0x0000000080015564                SetDispMask
+                0x00000000800155fc                DrawSync
+                0x0000000080015780                ClearImage
+                0x0000000080015810                ClearImage2
+                0x00000000800158a8                LoadImage
+                0x0000000080015908                StoreImage
+                0x0000000080015968                MoveImage
+                0x0000000080015a20                ClearOTag
+                0x0000000080015ae8                ClearOTagR
+                0x0000000080015b94                DrawPrim
+                0x0000000080015bf0                DrawOTag
+                0x0000000080015c60                PutDrawEnv
+                0x0000000080015d20                DrawOTagEnv
+                0x0000000080015df8                GetDrawEnv
+                0x0000000080015e2c                PutDispEnv
+                0x0000000080016324                GetDispEnv
+                0x0000000080016358                GetODE
+                0x0000000080016388                SetDrawArea
+                0x0000000080016408                SetDrawOffset
+                0x0000000080016448                SetDrawEnv
+                0x0000000080017d18                LoadImage2
+                0x0000000080017e04                StoreImage2
+                0x0000000080017ef0                MoveImage2
+                0x0000000080018034                DrawOTag2
+                0x0000000080018130                _GPU_ResetCallback
+ .text          0x0000000080018180       0xf0 third_party/psyq/lib\libgpu.a(e00.o)
+                0x0000000080018180                LoadTPage
+ .text          0x0000000080018270       0x70 third_party/psyq/lib\libgpu.a(e02.o)
+                0x0000000080018270                LoadClut2
+ .text          0x00000000800182e0       0x20 third_party/psyq/lib\libgpu.a(p01.o)
+                0x00000000800182e0                GetClut
+ .text          0x0000000080018300      0x500 third_party/psyq/lib\libgs.a(2d_sp0.o)
+                0x0000000080018300                GsSortSprite
+ .text          0x0000000080018800      0x550 third_party/psyq/lib\libgs.a(gs_001.o)
+                0x0000000080018800                GsInitGraph
+                0x0000000080018990                GsInitGraph2
+                0x0000000080018c18                GsSortClear
+ .text          0x0000000080018d50       0x10 third_party/psyq/lib\libgs.a(gs_0021.o)
+                0x0000000080018d50                GsGetActiveBuff
+ .text          0x0000000080018d60      0x110 third_party/psyq/lib\libgs.a(gs_0022.o)
+                0x0000000080018d60                GsSetDrawBuffOffset
+ .text          0x0000000080018e70       0x80 third_party/psyq/lib\libgs.a(gs_003.o)
+                0x0000000080018e70                GsSetDrawBuffClip
+ .text          0x0000000080018ef0       0xb0 third_party/psyq/lib\libgs.a(gs_010.o)
+                0x0000000080018ef0                GsSwapDispBuff
+ .text          0x0000000080018fa0       0xa0 third_party/psyq/lib\libgs.a(gs_103.o)
+                0x0000000080018fa0                GsDefDispBuff
+ .text          0x0000000080019040       0x30 third_party/psyq/lib\libgs.a(gs_111.o)
+                0x0000000080019040                GsDrawOt
+ .text          0x0000000080019070       0x60 third_party/psyq/lib\libgs.a(gs_113.o)
+                0x0000000080019070                GsClearOt
+ .text          0x00000000800190d0       0x50 third_party/psyq/lib\libgs.a(gs_121.o)
+                0x00000000800190d0                gte_init
+ .text          0x0000000080019120       0xf0 third_party/psyq/lib\libgs.a(gs_122.o)
+                0x0000000080019120                GsGetTimInfo
+ .text          0x0000000080019210       0x10 third_party/psyq/lib\libgs.a(gs_124.o)
+                0x0000000080019210                GsSetWorkBase
+ .text          0x0000000080019220       0xa0 third_party/psyq/lib\libgs.a(2d_com1.o)
+                0x0000000080019220                _make_packet
+ .text          0x00000000800192c0       0x80 third_party/psyq/lib\libgte.a(cmb_00.o)
+                0x00000000800192c0                RotTransPers4
+ .text          0x0000000080019340      0x290 third_party/psyq/lib\libgte.a(fgo_01.o)
+                0x0000000080019340                RotMatrix
+ .text          0x00000000800195d0       0x90 third_party/psyq/lib\libgte.a(msc00.o)
+                0x00000000800195d8                InitGeom
+ .text          0x0000000080019660       0x30 third_party/psyq/lib\libgte.a(mtx_07.o)
+                0x0000000080019660                TransMatrix
+ .text          0x0000000080019690      0x140 third_party/psyq/lib\libgte.a(mtx_08.o)
+                0x0000000080019690                ScaleMatrix
+ .text          0x00000000800197d0       0x30 third_party/psyq/lib\libgte.a(mtx_09.o)
+                0x00000000800197d0                SetRotMatrix
+ .text          0x0000000080019800       0x20 third_party/psyq/lib\libgte.a(mtx_12.o)
+                0x0000000080019800                SetTransMatrix
+ .text          0x0000000080019820       0xe0 third_party/psyq/lib\libgte.a(patchgte.o)
+                0x0000000080019820                _patch_gte
+ .text          0x0000000080019900       0x10 third_party/psyq/lib\libgte.a(reg09.o)
+                0x0000000080019900                ReadGeomScreen
+ .text          0x0000000080019910       0x20 third_party/psyq/lib\libgte.a(reg11.o)
+                0x0000000080019910                SetFarColor
+ .text          0x0000000080019930       0x20 third_party/psyq/lib\libgte.a(reg12.o)
+                0x0000000080019930                SetGeomOffset
+ .text          0x0000000080019950      0x310 third_party/psyq/lib\libspu.a(s_gca.o)
+                0x0000000080019950                SpuGetCommonAttr
+ .text          0x0000000080019c60       0x20 third_party/psyq/lib\libspu.a(s_i.o)
+                0x0000000080019c60                SpuInit
+ .text          0x0000000080019c80      0x160 third_party/psyq/lib\libspu.a(s_ini.o)
+                0x0000000080019c80                _SpuInit
+                0x0000000080019d68                SpuStart
+ .text          0x0000000080019de0       0x40 third_party/psyq/lib\libspu.a(s_sccm.o)
+                0x0000000080019de0                SpuSetCommonCDMix
+ .text          0x0000000080019e20       0x20 third_party/psyq/lib\libspu.a(s_sccv.o)
+                0x0000000080019e20                SpuSetCommonCDVolume
+ .text          0x0000000080019e40       0x20 third_party/psyq/lib\libspu.a(s_scmv.o)
+                0x0000000080019e40                SpuSetCommonMasterVolume
+ .text          0x0000000080019e60      0xb40 third_party/psyq/lib\libspu.a(spu.o)
+                0x0000000080019e60                _spu_init
+                0x000000008001a2a0                _spu_FiDMA
+                0x000000008001a35c                _spu_Fr_
+                0x000000008001a404                _spu_t
+                0x000000008001a684                _spu_Fw
+                0x000000008001a708                _spu_Fr
+                0x000000008001a76c                _spu_FsetRXX
+                0x000000008001a7b0                _spu_FsetRXXa
+                0x000000008001a854                _spu_FgetRXXa
+                0x000000008001a890                _spu_FsetPCR
+                0x000000008001a938                _spu_Fw1ts
+ .text          0x000000008001a9a0       0x30 third_party/psyq/lib\libspu.a(s_dcb.o)
+                0x000000008001a9a0                _SpuDataCallback
+ .text          0x000000008001a9d0       0x10 third_party/psyq/lib\libapi.a(a07.o)
+                0x000000008001a9d0                DeliverEvent
+ .text          0x000000008001a9e0       0x10 third_party/psyq/lib\libapi.a(a08.o)
+                0x000000008001a9e0                OpenEvent
+ .text          0x000000008001a9f0       0x10 third_party/psyq/lib\libapi.a(a12.o)
+                0x000000008001a9f0                EnableEvent
+ .text          0x000000008001aa00       0x10 third_party/psyq/lib\libapi.a(a22.o)
+                0x000000008001aa00                PAD_dr
+ .text          0x000000008001aa10       0x10 third_party/psyq/lib\libapi.a(a23.o)
+                0x000000008001aa10                ReturnFromException
+ .text          0x000000008001aa20       0x10 third_party/psyq/lib\libapi.a(a24.o)
+                0x000000008001aa20                ResetEntryInt
+ .text          0x000000008001aa30       0x10 third_party/psyq/lib\libapi.a(a25.o)
+                0x000000008001aa30                HookEntryInt
+ .text          0x000000008001aa40       0x10 third_party/psyq/lib\libapi.a(a36.o)
+                0x000000008001aa40                EnterCriticalSection
+ .text          0x000000008001aa50       0x10 third_party/psyq/lib\libapi.a(a37.o)
+                0x000000008001aa50                ExitCriticalSection
+ .text          0x000000008001aa60       0x10 third_party/psyq/lib\libapi.a(a91.o)
+                0x000000008001aa60                ChangeClearPAD
+ .text          0x000000008001aa70       0x20 third_party/psyq/lib\libapi.a(c114.o)
+                0x000000008001aa78                _96_remove
+ .text          0x000000008001aa90       0x10 third_party/psyq/lib\libapi.a(c68.o)
+                0x000000008001aa90                FlushCache
+ .text          0x000000008001aaa0       0x10 third_party/psyq/lib\libapi.a(c73.o)
+                0x000000008001aaa0                GPU_cw
+ .text          0x000000008001aab0       0x10 third_party/psyq/lib\libapi.a(l10.o)
+                0x000000008001aab0                ChangeClearRCnt
+ .text          0x000000008001aac0      0x290 third_party/psyq/lib\libapi.a(pad.o)
+                0x000000008001aac0                SetInitPadFlag
+                0x000000008001aacc                ReadInitPadFlag
+                0x000000008001aadc                PAD_init
+                0x000000008001ab6c                InitPAD
+                0x000000008001abfc                StartPAD
+ .text          0x000000008001ad50       0xa0 third_party/psyq/lib\libapi.a(patch.o)
+                0x000000008001ad50                EnablePAD
+                0x000000008001ad64                DisablePAD
+                0x000000008001ad78                _patch_pad
+ .text          0x000000008001adf0       0x10 third_party/psyq/lib\libapi.a(a18.o)
+                0x000000008001adf0                InitPAD2
+ .text          0x000000008001ae00       0x10 third_party/psyq/lib\libapi.a(a19.o)
+                0x000000008001ae00                StartPAD2
+ .text          0x000000008001ae10       0x10 third_party/psyq/lib\libapi.a(a21.o)
+                0x000000008001ae10                PAD_init2
+ .text          0x000000008001ae20       0x70 third_party/psyq/lib\libapi.a(chclrpad.o)
+                0x000000008001ae20                _remove_ChgclrPAD
+ .text          0x000000008001ae90       0x10 third_party/psyq/lib\libapi.a(l02.o)
+                0x000000008001ae90                SysEnqIntRP
+ .text          0x000000008001aea0       0x10 third_party/psyq/lib\libapi.a(l03.o)
+                0x000000008001aea0                SysDeqIntRP
+ .text          0x000000008001aeb0       0x20 third_party/psyq/lib\libc.a(a63.o)
+                0x000000008001aeb8                puts
+ .text          0x000000008001aed0       0x10 third_party/psyq/lib\libc.a(c19.o)
+                0x000000008001aed0                setjmp
+ .text          0x000000008001aee0       0x10 third_party/psyq/lib\libc.a(c27.o)
+                0x000000008001aee0                strlen
+ .text          0x000000008001aef0       0x10 third_party/psyq/lib\libc.a(c42.o)
+                0x000000008001aef0                memcpy
+ .text          0x000000008001af00       0x10 third_party/psyq/lib\libc.a(c43.o)
+                0x000000008001af00                memset
+                0x000000008001af10                . = ALIGN (0x10)
  *(.init)
-                0x000000008001a3d0                . = ALIGN (0x10)
+                0x000000008001af10                . = ALIGN (0x10)
  *(.fini)
-                0x000000008001a3d0                . = ALIGN (0x10)
-                0x000000008001a3d0                __text_end = .
-                0x000000008001a3d0                __ftext_end = ABSOLUTE (.)
-                0x000000008001a3d0                __fdata_start = ABSOLUTE (.)
+                0x000000008001af10                . = ALIGN (0x10)
+                0x000000008001af10                __text_end = .
+                0x000000008001af10                __ftext_end = ABSOLUTE (.)
+                0x000000008001af10                __fdata_start = ABSOLUTE (.)
 
-.rodata         0x000000008001a3d0      0xa10
+.rodata         0x000000008001af10      0xb90
  *(.rodata .rodata.* .rdata .rdata.* .gnu.linkonce.r.*)
- .rodata        0x000000008001a3d0       0x10 third_party/nugget/common/crt0/crt0.o
+ .rodata        0x000000008001af10       0x10 third_party/nugget/common/crt0/crt0.o
  .rodata.clearVRAM.str1.4
-                0x000000008001a3e0        0xf main.o
- *fill*         0x000000008001a3ef        0x1 
+                0x000000008001af20        0xf main.o
+ *fill*         0x000000008001af2f        0x1 
  .rodata.initGraphics.str1.4
-                0x000000008001a3f0       0xaa main.o
- *fill*         0x000000008001a49a        0x2 
+                0x000000008001af30       0xaa main.o
+ *fill*         0x000000008001afda        0x2 
  .rodata.printSpu.str1.4
-                0x000000008001a49c       0x59 main.o
- *fill*         0x000000008001a4f5        0x3 
- .rodata.readControllerInput.str1.4
-                0x000000008001a4f8       0xf7 main.o
- *fill*         0x000000008001a5ef        0x1 
+                0x000000008001afdc       0x59 main.o
+ *fill*         0x000000008001b035        0x3 
+ .rodata.shuffleFunction.str1.4
+                0x000000008001b038       0x8e main.o
+ *fill*         0x000000008001b0c6        0x2 
  .rodata.calculateCurrentTrackLength.str1.4
-                0x000000008001a5f0       0x47 main.o
- *fill*         0x000000008001a637        0x1 
+                0x000000008001b0c8       0x47 main.o
+ *fill*         0x000000008001b10f        0x1 
  .rodata.getTableOfContents.str1.4
-                0x000000008001a638       0x85 main.o
- *fill*         0x000000008001a6bd        0x3 
+                0x000000008001b110       0x85 main.o
+ *fill*         0x000000008001b195        0x3 
  .rodata.playerInformationLogic.str1.4
-                0x000000008001a6c0       0x6a main.o
+                0x000000008001b198       0x6a main.o
                                          0x6e (size before relaxing)
- *fill*         0x000000008001a72a        0x6 
- .rdata         0x000000008001a730       0x20 third_party/psyq/lib\libcd.a(event.o)
- .rdata         0x000000008001a750       0x40 third_party/psyq/lib\libcd.a(toc.o)
- .rdata         0x000000008001a790      0x260 third_party/psyq/lib\libcd.a(bios_1.o)
- .rdata         0x000000008001a9f0       0x70 third_party/psyq/lib\libetc.a(intr.o)
- .rdata         0x000000008001aa60       0x30 third_party/psyq/lib\libetc.a(intr_dma.o)
- .rdata         0x000000008001aa90       0x10 third_party/psyq/lib\libetc.a(vsync.o)
- .rdata         0x000000008001aaa0       0xa0 third_party/psyq/lib\libgpu.a(font.o)
- .rdata         0x000000008001ab40      0x220 third_party/psyq/lib\libgpu.a(sys.o)
- .rdata         0x000000008001ad60       0x30 third_party/psyq/lib\libgs.a(2d_com1.o)
- .rdata         0x000000008001ad90       0x50 third_party/psyq/lib\libspu.a(spu.o)
-                0x000000008001ade0                . = ALIGN (0x10)
-                0x000000008001ade0                __preinit_array_start = .
+ *fill*         0x000000008001b202        0x2 
+ .rodata.readControllerInput.str1.4
+                0x000000008001b204      0x13f main.o
+ *fill*         0x000000008001b343        0x5 
+ .rdata         0x000000008001b348       0x90 third_party/psyq/lib\libcd.a(cdplay.o)
+ .rdata         0x000000008001b3d8       0x20 third_party/psyq/lib\libcd.a(event.o)
+ .rdata         0x000000008001b3f8       0x10 third_party/psyq/lib\libcd.a(s_011.o)
+ .rdata         0x000000008001b408       0x40 third_party/psyq/lib\libcd.a(toc.o)
+ .rdata         0x000000008001b448      0x260 third_party/psyq/lib\libcd.a(bios_1.o)
+ .rdata         0x000000008001b6a8       0x70 third_party/psyq/lib\libetc.a(intr.o)
+ .rdata         0x000000008001b718       0x30 third_party/psyq/lib\libetc.a(intr_dma.o)
+ .rdata         0x000000008001b748       0x10 third_party/psyq/lib\libetc.a(vsync.o)
+ .rdata         0x000000008001b758       0xa0 third_party/psyq/lib\libgpu.a(font.o)
+ .rdata         0x000000008001b7f8      0x220 third_party/psyq/lib\libgpu.a(sys.o)
+ .rdata         0x000000008001ba18       0x30 third_party/psyq/lib\libgs.a(2d_com1.o)
+ .rdata         0x000000008001ba48       0x50 third_party/psyq/lib\libspu.a(spu.o)
+                0x000000008001baa0                . = ALIGN (0x10)
+ *fill*         0x000000008001ba98        0x8 
+                0x000000008001baa0                __preinit_array_start = .
  *(.preinit_array)
-                0x000000008001ade0                __preinit_array_end = .
-                0x000000008001ade0                . = ALIGN (0x10)
-                0x000000008001ade0                __init_array_start = .
+                0x000000008001baa0                __preinit_array_end = .
+                0x000000008001baa0                . = ALIGN (0x10)
+                0x000000008001baa0                __init_array_start = .
  *(SORT_BY_NAME(.init_array.*))
  *(.init_array)
-                0x000000008001ade0                . = ALIGN (0x10)
+                0x000000008001baa0                . = ALIGN (0x10)
  *crtbegin.o(.ctors)
  *(EXCLUDE_FILE(*crtend.o) .ctors)
  *(SORT_BY_NAME(.ctors.*))
  *crtend.o(.ctors)
-                0x000000008001ade0                __init_array_end = .
-                0x000000008001ade0                . = ALIGN (0x10)
-                0x000000008001ade0                __fini_array_start = .
+                0x000000008001baa0                __init_array_end = .
+                0x000000008001baa0                . = ALIGN (0x10)
+                0x000000008001baa0                __fini_array_start = .
  *(.fini_array)
  *(SORT_BY_NAME(.fini_array.*))
  *crtbegin.o(.dtors)
  *(EXCLUDE_FILE(*crtend.o) .dtors)
  *(SORT_BY_NAME(.dtors.*))
  *crtend.o(.dtors)
-                0x000000008001ade0                __fini_array_end = .
-                0x000000008001ade0                __build_id = .
+                0x000000008001baa0                __fini_array_end = .
+                0x000000008001baa0                __build_id = .
  *(.note.gnu.build-id)
-                0x000000008001ade0                __build_id_end = .
+                0x000000008001baa0                __build_id_end = .
 
-.rel.dyn        0x000000008001ade0        0x0
- .rel.dyn       0x000000008001ade0        0x0 third_party/psyq/lib\libgpu.a(sys.o)
+.rel.dyn        0x000000008001baa0        0x0
+ .rel.dyn       0x000000008001baa0        0x0 third_party/psyq/lib\libgpu.a(sys.o)
 
 .rodata1
  *(.rodata1)
-                0x000000008001ade0                __data_start = .
+                0x000000008001baa0                __data_start = .
 
-.data           0x000000008001ade0    0x2c220
+.data           0x000000008001baa0    0x2c560
  *(.data .data.* .gnu.linkonce.d.*)
- .data          0x000000008001ade0        0x0 third_party/nugget/common/crt0/crt0.o
- .data          0x000000008001ade0        0x0 main.o
+ .data          0x000000008001baa0        0x0 third_party/nugget/common/crt0/crt0.o
+ .data          0x000000008001baa0        0x0 main.o
  .data.newVolumeLevelCd.5
-                0x000000008001ade0        0x4 main.o
+                0x000000008001baa0        0x4 main.o
  .data.direction.8
-                0x000000008001ade4        0xc main.o
- .data.image    0x000000008001adf0    0x25814 main.o
-                0x000000008001adf0                image
- .data          0x0000000080040604        0x0 tools.o
- *fill*         0x0000000080040604        0x4 50414444
- .data          0x0000000080040608       0x20 third_party/psyq/lib\libapi.a(counter.o)
- .data          0x0000000080040628       0x10 third_party/psyq/lib\libcd.a(event.o)
-                0x0000000080040628                CD_cbread
-                0x000000008004062c                CD_read_dma_mode
- .data          0x0000000080040638       0x80 third_party/psyq/lib\libcd.a(s_016.o)
- .data          0x00000000800406b8      0x310 third_party/psyq/lib\libcd.a(bios_1.o)
-                0x00000000800406c0                CD_cbsync
-                0x00000000800406c4                CD_cbready
-                0x00000000800406c8                CD_debug
-                0x00000000800406cc                CD_status
-                0x00000000800406d0                CD_status1
-                0x00000000800406d4                CD_nopen
-                0x00000000800406d8                CD_pos
-                0x00000000800406dc                CD_mode
-                0x00000000800406dd                CD_com
-                0x00000000800406e0                DS_active
-                0x00000000800406e4                CD_comstr
-                0x0000000080040764                CD_intstr
- .data          0x00000000800409c8     0x1100 third_party/psyq/lib\libetc.a(intr.o)
- .data          0x0000000080041ac8       0x30 third_party/psyq/lib\libetc.a(intr_dma.o)
- .data          0x0000000080041af8       0x30 third_party/psyq/lib\libetc.a(intr_vb.o)
-                0x0000000080041b18                Vcount
- .data          0x0000000080041b28       0x10 third_party/psyq/lib\libetc.a(vmode.o)
- .data          0x0000000080041b38       0x20 third_party/psyq/lib\libetc.a(vsync.o)
-                0x0000000080041b48                Hcount
- .data          0x0000000080041b58      0xb90 third_party/psyq/lib\libgpu.a(font.o)
-                0x0000000080041b58                Font
- .data          0x00000000800426e8      0x1a0 third_party/psyq/lib\libgpu.a(sys.o)
-                0x0000000080042734                GPU_printf
-                0x0000000080042738                GEnv
-                0x0000000080042860                _qin
-                0x0000000080042864                _qout
- .data          0x0000000080042888       0x10 third_party/psyq/lib\libgs.a(global.o)
-                0x0000000080042888                GsADIVZ
-                0x000000008004288c                GsADIVW
-                0x000000008004288e                GsADIVH
- .data          0x0000000080042898       0x10 third_party/psyq/lib\libgs.a(gs_001.o)
- .data          0x00000000800428a8       0x10 third_party/psyq/lib\libgte.a(msc00.o)
- .data          0x00000000800428b8      0x180 third_party/psyq/lib\libgte.a(sqrtbl.o)
-                0x00000000800428b8                SQRT
- .data          0x0000000080042a38     0x4000 third_party/psyq/lib\libgte.a(cstbl.o)
-                0x0000000080042a38                rcossin_tbl
- .data          0x0000000080046a38       0x80 third_party/psyq/lib\libspu.a(s_ini.o)
-                0x0000000080046a40                _spu_EVdma
-                0x0000000080046a44                _spu_keystat
-                0x0000000080046a48                _spu_trans_mode
-                0x0000000080046a4c                _spu_rev_flag
-                0x0000000080046a50                _spu_rev_reserve_wa
-                0x0000000080046a54                _spu_rev_offsetaddr
-                0x0000000080046a58                _spu_rev_attr
-                0x0000000080046a6c                _spu_RQvoice
-                0x0000000080046a70                _spu_RQmask
-                0x0000000080046a74                _spu_voice_centerNote
-                0x0000000080046aa4                _spu_env
-                0x0000000080046aa8                _spu_isCalled
- .data          0x0000000080046ab8       0x10 third_party/psyq/lib\libspu.a(s_m.o)
-                0x0000000080046ab8                _spu_AllocBlockNum
-                0x0000000080046abc                _spu_AllocLastNum
-                0x0000000080046ac0                _spu_memList
- .data          0x0000000080046ac8       0x30 third_party/psyq/lib\libspu.a(s_rmp0.o)
-                0x0000000080046ac8                _spu_rev_startaddr
- .data          0x0000000080046af8       0x60 third_party/psyq/lib\libspu.a(spu.o)
-                0x0000000080046af8                _spu_RXX
-                0x0000000080046b10                _spu_tsa
-                0x0000000080046b14                _spu_transMode
-                0x0000000080046b18                _spu_addrMode
-                0x0000000080046b1c                _spu_mem_mode
-                0x0000000080046b20                _spu_mem_mode_plus
-                0x0000000080046b24                _spu_mem_mode_unit
-                0x0000000080046b28                _spu_mem_mode_unitM
-                0x0000000080046b2c                _spu_inTransfer
-                0x0000000080046b30                _spu_transferCallback
-                0x0000000080046b34                _spu_IRQCallback
- .data          0x0000000080046b58       0x10 third_party/psyq/lib\libapi.a(pad.o)
+                0x000000008001baa4        0xc main.o
+ .data.image    0x000000008001bab0    0x25814 main.o
+                0x000000008001bab0                image
+ .data          0x00000000800412c4        0x0 tools.o
+ *fill*         0x00000000800412c4        0x4 50414444
+ .data          0x00000000800412c8       0x20 third_party/psyq/lib\libapi.a(counter.o)
+ .data          0x00000000800412e8      0x1b0 third_party/psyq/lib\libcd.a(cdplay.o)
+ .data          0x0000000080041498       0x10 third_party/psyq/lib\libcd.a(event.o)
+                0x0000000080041498                CD_cbread
+                0x000000008004149c                CD_read_dma_mode
+ .data          0x00000000800414a8       0x80 third_party/psyq/lib\libcd.a(s_016.o)
+ .data          0x0000000080041528      0x310 third_party/psyq/lib\libcd.a(bios_1.o)
+                0x0000000080041530                CD_cbsync
+                0x0000000080041534                CD_cbready
+                0x0000000080041538                CD_debug
+                0x000000008004153c                CD_status
+                0x0000000080041540                CD_status1
+                0x0000000080041544                CD_nopen
+                0x0000000080041548                CD_pos
+                0x000000008004154c                CD_mode
+                0x000000008004154d                CD_com
+                0x0000000080041550                DS_active
+                0x0000000080041554                CD_comstr
+                0x00000000800415d4                CD_intstr
+ .data          0x0000000080041838     0x1100 third_party/psyq/lib\libetc.a(intr.o)
+ .data          0x0000000080042938       0x30 third_party/psyq/lib\libetc.a(intr_dma.o)
+ .data          0x0000000080042968       0x30 third_party/psyq/lib\libetc.a(intr_vb.o)
+                0x0000000080042988                Vcount
+ .data          0x0000000080042998       0x10 third_party/psyq/lib\libetc.a(vmode.o)
+ .data          0x00000000800429a8       0x20 third_party/psyq/lib\libetc.a(vsync.o)
+                0x00000000800429b8                Hcount
+ .data          0x00000000800429c8      0xb90 third_party/psyq/lib\libgpu.a(font.o)
+                0x00000000800429c8                Font
+ .data          0x0000000080043558      0x1a0 third_party/psyq/lib\libgpu.a(sys.o)
+                0x00000000800435a4                GPU_printf
+                0x00000000800435a8                GEnv
+                0x00000000800436d0                _qin
+                0x00000000800436d4                _qout
+ .data          0x00000000800436f8       0x10 third_party/psyq/lib\libgs.a(global.o)
+                0x00000000800436f8                GsADIVZ
+                0x00000000800436fc                GsADIVW
+                0x00000000800436fe                GsADIVH
+ .data          0x0000000080043708       0x10 third_party/psyq/lib\libgs.a(gs_001.o)
+ .data          0x0000000080043718       0x10 third_party/psyq/lib\libgte.a(msc00.o)
+ .data          0x0000000080043728      0x180 third_party/psyq/lib\libgte.a(sqrtbl.o)
+                0x0000000080043728                SQRT
+ .data          0x00000000800438a8     0x4000 third_party/psyq/lib\libgte.a(cstbl.o)
+                0x00000000800438a8                rcossin_tbl
+ .data          0x00000000800478a8       0x80 third_party/psyq/lib\libspu.a(s_ini.o)
+                0x00000000800478b0                _spu_EVdma
+                0x00000000800478b4                _spu_keystat
+                0x00000000800478b8                _spu_trans_mode
+                0x00000000800478bc                _spu_rev_flag
+                0x00000000800478c0                _spu_rev_reserve_wa
+                0x00000000800478c4                _spu_rev_offsetaddr
+                0x00000000800478c8                _spu_rev_attr
+                0x00000000800478dc                _spu_RQvoice
+                0x00000000800478e0                _spu_RQmask
+                0x00000000800478e4                _spu_voice_centerNote
+                0x0000000080047914                _spu_env
+                0x0000000080047918                _spu_isCalled
+ .data          0x0000000080047928       0x10 third_party/psyq/lib\libspu.a(s_m.o)
+                0x0000000080047928                _spu_AllocBlockNum
+                0x000000008004792c                _spu_AllocLastNum
+                0x0000000080047930                _spu_memList
+ .data          0x0000000080047938       0x30 third_party/psyq/lib\libspu.a(s_rmp0.o)
+                0x0000000080047938                _spu_rev_startaddr
+ .data          0x0000000080047968       0x60 third_party/psyq/lib\libspu.a(spu.o)
+                0x0000000080047968                _spu_RXX
+                0x0000000080047980                _spu_tsa
+                0x0000000080047984                _spu_transMode
+                0x0000000080047988                _spu_addrMode
+                0x000000008004798c                _spu_mem_mode
+                0x0000000080047990                _spu_mem_mode_plus
+                0x0000000080047994                _spu_mem_mode_unit
+                0x0000000080047998                _spu_mem_mode_unitM
+                0x000000008004799c                _spu_inTransfer
+                0x00000000800479a0                _spu_transferCallback
+                0x00000000800479a4                _spu_IRQCallback
+ .data          0x00000000800479c8       0x10 third_party/psyq/lib\libapi.a(pad.o)
  *(.data1)
  *(.sdata .sdata.* .gnu.linkonce.s.*)
+ .sdata.repeat  0x00000000800479d8        0x4 main.o
+                0x00000000800479d8                repeat
  .sdata.CdVolume
-                0x0000000080046b68        0x4 main.o
-                0x0000000080046b68                CdVolume
+                0x00000000800479dc        0x4 main.o
+                0x00000000800479dc                CdVolume
  .sdata.__stacksize
-                0x0000000080046b6c        0x4 main.o
-                0x0000000080046b6c                __stacksize
+                0x00000000800479e0        0x4 main.o
+                0x00000000800479e0                __stacksize
  .sdata.__ramsize
-                0x0000000080046b70        0x4 main.o
-                0x0000000080046b70                __ramsize
+                0x00000000800479e4        0x4 main.o
+                0x00000000800479e4                __ramsize
  *(.sdata2 .sdata2.* .gnu.linkonce.s2.*)
  *(.got.plt)
  *(.got)
-                0x0000000080047000                . = ALIGN (0x800)
- *fill*         0x0000000080046b74      0x48c 50414444
-                0x0000000080047000                __data_end = .
-                0x0000000080047000                __fdata_end = .
-                0x0000000080047000                __bss_start = .
+                0x0000000080048000                . = ALIGN (0x800)
+ *fill*         0x00000000800479e8      0x618 50414444
+                0x0000000080048000                __data_end = .
+                0x0000000080048000                __fdata_end = .
+                0x0000000080048000                __bss_start = .
 
-.sbss           0x0000000080047000     0x63b0
+.sbss           0x0000000080048000     0x66f0
  *(.dynsbss)
  *(.sbss .sbss.* .gnu.linkonce.sb.*)
  .sbss.currentTrackTimeInSeconds
-                0x0000000080047000        0x4 main.o
-                0x0000000080047000                currentTrackTimeInSeconds
+                0x0000000080048000        0x4 main.o
+                0x0000000080048000                currentTrackTimeInSeconds
  .sbss.debounceTimer
-                0x0000000080047004        0x4 main.o
-                0x0000000080047004                debounceTimer
+                0x0000000080048004        0x4 main.o
+                0x0000000080048004                debounceTimer
  .sbss.numTracks
-                0x0000000080047008        0x4 main.o
-                0x0000000080047008                numTracks
- .sbss.shuffle  0x000000008004700c        0x1 main.o
-                0x000000008004700c                shuffle
- *fill*         0x000000008004700d        0x3 
+                0x0000000080048008        0x4 main.o
+                0x0000000080048008                numTracks
+ .sbss.result   0x000000008004800c        0x8 main.o
+                0x000000008004800c                result
+ .sbss.shuffle  0x0000000080048014        0x1 main.o
+                0x0000000080048014                shuffle
+ *fill*         0x0000000080048015        0x3 
  .sbss.currentbuffer
-                0x0000000080047010        0x4 main.o
-                0x0000000080047010                currentbuffer
+                0x0000000080048018        0x4 main.o
+                0x0000000080048018                currentbuffer
  .sbss.fntColorBG
-                0x0000000080047014        0x4 tools.o
-                0x0000000080047014                fntColorBG
+                0x000000008004801c        0x4 tools.o
+                0x000000008004801c                fntColorBG
  .sbss.fntColor
-                0x0000000080047018        0x4 tools.o
-                0x0000000080047018                fntColor
+                0x0000000080048020        0x4 tools.o
+                0x0000000080048020                fntColor
  *(.scommon)
  *(.dynbss)
  *(.bss .bss.* .gnu.linkonce.b.*)
  .bss.oldTrack.0
-                0x000000008004701c        0x4 main.o
+                0x0000000080048024        0x4 main.o
  .bss.hasTrackChanged.1
-                0x0000000080047020        0x4 main.o
- .bss.mute.2    0x0000000080047024        0x1 main.o
- .bss.pause.3   0x0000000080047025        0x1 main.o
- *fill*         0x0000000080047026        0x2 
+                0x0000000080048028        0x4 main.o
+ .bss.mute.2    0x000000008004802c        0x1 main.o
+ .bss.pause.3   0x000000008004802d        0x1 main.o
+ *fill*         0x000000008004802e        0x2 
  .bss.fontColours.9
-                0x0000000080047028        0x3 main.o
- *fill*         0x000000008004702b        0x1 
+                0x0000000080048030        0x3 main.o
+ *fill*         0x0000000080048033        0x1 
  .bss.colorIndex.10
-                0x000000008004702c        0x4 main.o
+                0x0000000080048034        0x4 main.o
+ .bss.shuffledTracks
+                0x0000000080048038      0x194 main.o
+                0x0000000080048038                shuffledTracks
  .bss.decimalValues
-                0x0000000080047030       0x20 main.o
-                0x0000000080047030                decimalValues
- .bss.loc       0x0000000080047050      0x190 main.o
-                0x0000000080047050                loc
- .bss.image1    0x00000000800471e0       0x48 main.o
-                0x00000000800471e0                image1
+                0x00000000800481cc       0x20 main.o
+                0x00000000800481cc                decimalValues
+ .bss.loc       0x00000000800481ec      0x190 main.o
+                0x00000000800481ec                loc
+ .bss.image1    0x000000008004837c       0x48 main.o
+                0x000000008004837c                image1
  .bss.GPUOutputPacket
-                0x0000000080047228      0x258 main.o
-                0x0000000080047228                GPUOutputPacket
+                0x00000000800483c4      0x258 main.o
+                0x00000000800483c4                GPUOutputPacket
  .bss.OrderingTable
-                0x0000000080047480       0x10 main.o
-                0x0000000080047480                OrderingTable
+                0x000000008004861c       0x10 main.o
+                0x000000008004861c                OrderingTable
  .bss.WorldOrderingTable
-                0x0000000080047490       0x28 main.o
-                0x0000000080047490                WorldOrderingTable
- .bss           0x00000000800474b8       0x34 third_party/psyq/lib\libcd.a(bios_1.o)
-                0x00000000800474e8                StMode
- *fill*         0x00000000800474ec        0x4 
- .bss           0x00000000800474f0       0x14 third_party/psyq/lib\libetc.a(pad.o)
-                0x0000000080047500                PadIdentifier
- *fill*         0x0000000080047504        0x4 
- .bss           0x0000000080047508     0x4410 third_party/psyq/lib\libgpu.a(font.o)
- .bss           0x000000008004b918     0x1850 third_party/psyq/lib\libgpu.a(sys.o)
-                0x000000008004b968                _que
- .bss           0x000000008004d168       0x54 third_party/psyq/lib\libgs.a(global.o)
-                0x000000008004d168                GsOUT_PACKET_P
-                0x000000008004d170                GsMATE_C
-                0x000000008004d178                GsLMODE
-                0x000000008004d180                GsLIGNR
-                0x000000008004d188                GsLIOFF
-                0x000000008004d190                GsZOVER
-                0x000000008004d198                GsBACKC
-                0x000000008004d1a0                GsNDIV
-                0x000000008004d1a8                GsTRATE
-                0x000000008004d1b0                GsTON
-                0x000000008004d1b8                GsDISPON
- *fill*         0x000000008004d1bc        0x4 
- .bss           0x000000008004d1c0       0xea third_party/psyq/lib\libgs.a(gs_001.o)
-                0x000000008004d1e0                PSDIDX
-                0x000000008004d1e8                GsDRAWENV
-                0x000000008004d248                GsDISPENV
-                0x000000008004d260                PSDGPU
-                0x000000008004d268                PSDBASEX
-                0x000000008004d270                PSDBASEY
-                0x000000008004d278                POSITION
-                0x000000008004d280                CLIP2
-                0x000000008004d288                PSDCNT
-                0x000000008004d290                PSDOFSX
-                0x000000008004d298                PSDOFSY
-                0x000000008004d2a0                GsORGOFSX
-                0x000000008004d2a8                GsORGOFSY
- *fill*         0x000000008004d2aa        0x6 
- .bss           0x000000008004d2b0       0x24 third_party/psyq/lib\libgs.a(gs_104.o)
-                0x000000008004d2b0                HWD0
-                0x000000008004d2b8                VWD0
-                0x000000008004d2c0                GsCLIP3near
-                0x000000008004d2c8                GsLIGHT_MODE
-                0x000000008004d2d0                GsCLIP3far
- *fill*         0x000000008004d2d4        0x4 
- .bss           0x000000008004d2d8       0x40 third_party/psyq/lib\libgs.a(gs_107.o)
-                0x000000008004d2d8                GsLIGHTWSMATRIX
-                0x000000008004d2f8                _LC
- .bss           0x000000008004d318       0x40 third_party/psyq/lib\libgs.a(gs_128.o)
-                0x000000008004d318                GsIDMATRIX
-                0x000000008004d338                GsIDMATRIX2
- .bss           0x000000008004d358       0x10 third_party/psyq/lib\libgte.a(patchgte.o)
- .bss           0x000000008004d368       0x14 third_party/psyq/lib\libspu.a(spu.o)
-                0x000000008004d368                _spu_RQ
- *fill*         0x000000008004d37c        0x4 
- .bss           0x000000008004d380       0x10 third_party/psyq/lib\libapi.a(pad.o)
-                0x000000008004d380                _apiPadPatch
- .bss           0x000000008004d390       0x10 third_party/psyq/lib\libapi.a(patch.o)
- .bss           0x000000008004d3a0       0x10 third_party/psyq/lib\libapi.a(chclrpad.o)
+                0x000000008004862c       0x28 main.o
+                0x000000008004862c                WorldOrderingTable
+ *fill*         0x0000000080048654        0x4 
+ .bss           0x0000000080048658      0x1a0 third_party/psyq/lib\libcd.a(cdplay.o)
+ .bss           0x00000000800487f8       0x34 third_party/psyq/lib\libcd.a(bios_1.o)
+                0x0000000080048828                StMode
+ *fill*         0x000000008004882c        0x4 
+ .bss           0x0000000080048830       0x14 third_party/psyq/lib\libetc.a(pad.o)
+                0x0000000080048840                PadIdentifier
+ *fill*         0x0000000080048844        0x4 
+ .bss           0x0000000080048848     0x4410 third_party/psyq/lib\libgpu.a(font.o)
+ .bss           0x000000008004cc58     0x1850 third_party/psyq/lib\libgpu.a(sys.o)
+                0x000000008004cca8                _que
+ .bss           0x000000008004e4a8       0x54 third_party/psyq/lib\libgs.a(global.o)
+                0x000000008004e4a8                GsOUT_PACKET_P
+                0x000000008004e4b0                GsMATE_C
+                0x000000008004e4b8                GsLMODE
+                0x000000008004e4c0                GsLIGNR
+                0x000000008004e4c8                GsLIOFF
+                0x000000008004e4d0                GsZOVER
+                0x000000008004e4d8                GsBACKC
+                0x000000008004e4e0                GsNDIV
+                0x000000008004e4e8                GsTRATE
+                0x000000008004e4f0                GsTON
+                0x000000008004e4f8                GsDISPON
+ *fill*         0x000000008004e4fc        0x4 
+ .bss           0x000000008004e500       0xea third_party/psyq/lib\libgs.a(gs_001.o)
+                0x000000008004e520                PSDIDX
+                0x000000008004e528                GsDRAWENV
+                0x000000008004e588                GsDISPENV
+                0x000000008004e5a0                PSDGPU
+                0x000000008004e5a8                PSDBASEX
+                0x000000008004e5b0                PSDBASEY
+                0x000000008004e5b8                POSITION
+                0x000000008004e5c0                CLIP2
+                0x000000008004e5c8                PSDCNT
+                0x000000008004e5d0                PSDOFSX
+                0x000000008004e5d8                PSDOFSY
+                0x000000008004e5e0                GsORGOFSX
+                0x000000008004e5e8                GsORGOFSY
+ *fill*         0x000000008004e5ea        0x6 
+ .bss           0x000000008004e5f0       0x24 third_party/psyq/lib\libgs.a(gs_104.o)
+                0x000000008004e5f0                HWD0
+                0x000000008004e5f8                VWD0
+                0x000000008004e600                GsCLIP3near
+                0x000000008004e608                GsLIGHT_MODE
+                0x000000008004e610                GsCLIP3far
+ *fill*         0x000000008004e614        0x4 
+ .bss           0x000000008004e618       0x40 third_party/psyq/lib\libgs.a(gs_107.o)
+                0x000000008004e618                GsLIGHTWSMATRIX
+                0x000000008004e638                _LC
+ .bss           0x000000008004e658       0x40 third_party/psyq/lib\libgs.a(gs_128.o)
+                0x000000008004e658                GsIDMATRIX
+                0x000000008004e678                GsIDMATRIX2
+ .bss           0x000000008004e698       0x10 third_party/psyq/lib\libgte.a(patchgte.o)
+ .bss           0x000000008004e6a8       0x14 third_party/psyq/lib\libspu.a(spu.o)
+                0x000000008004e6a8                _spu_RQ
+ *fill*         0x000000008004e6bc        0x4 
+ .bss           0x000000008004e6c0       0x10 third_party/psyq/lib\libapi.a(pad.o)
+                0x000000008004e6c0                _apiPadPatch
+ .bss           0x000000008004e6d0       0x10 third_party/psyq/lib\libapi.a(patch.o)
+ .bss           0x000000008004e6e0       0x10 third_party/psyq/lib\libapi.a(chclrpad.o)
  *(COMMON)
-                0x000000008004d3b0                . = ALIGN (0x4)
-                0x000000008004d3b0                __bss_end = .
-                0x000000008004d3b0                __heap_start = __heap_base
+                0x000000008004e6f0                . = ALIGN (0x4)
+                0x000000008004e6f0                __bss_end = .
+                0x000000008004e6f0                __heap_start = __heap_base
                 0x000000008000f800                . = (ADDR (.text) - 0x800)
                 0x000000008000f800                __end = .
 
@@ -945,108 +990,112 @@ OUTPUT(fuckityfuckity.elf elf32-littlemips)
                                          0x13 (size before relaxing)
  .comment       0x0000000000000012       0x13 tools.o
 
-.note           0x0000000000000000     0x2b80
+.note           0x0000000000000000     0x2d50
  .note          0x0000000000000000       0x74 third_party/psyq/lib\libapi.a(counter.o)
  .note          0x0000000000000074       0x74 third_party/psyq/lib\libc.a(c47.o)
  .note          0x00000000000000e8       0x74 third_party/psyq/lib\libc.a(c48.o)
  .note          0x000000000000015c       0x74 third_party/psyq/lib\libc.a(c63.o)
- .note          0x00000000000001d0       0x74 third_party/psyq/lib\libcd.a(event.o)
- .note          0x0000000000000244       0x74 third_party/psyq/lib\libcd.a(s_016.o)
- .note          0x00000000000002b8       0x74 third_party/psyq/lib\libcd.a(toc.o)
- .note          0x000000000000032c       0x74 third_party/psyq/lib\libcd.a(bios_1.o)
- .note          0x00000000000003a0       0x74 third_party/psyq/lib\libcd.a(s_014.o)
- .note          0x0000000000000414       0x74 third_party/psyq/lib\libetc.a(intr.o)
- .note          0x0000000000000488       0x74 third_party/psyq/lib\libetc.a(intr_dma.o)
- .note          0x00000000000004fc       0x74 third_party/psyq/lib\libetc.a(intr_vb.o)
- .note          0x0000000000000570       0x74 third_party/psyq/lib\libetc.a(pad.o)
- .note          0x00000000000005e4       0x74 third_party/psyq/lib\libetc.a(vmode.o)
- .note          0x0000000000000658       0x74 third_party/psyq/lib\libetc.a(vsync.o)
- .note          0x00000000000006cc       0x74 third_party/psyq/lib\libgpu.a(font.o)
- .note          0x0000000000000740       0x74 third_party/psyq/lib\libgpu.a(p00.o)
- .note          0x00000000000007b4       0x74 third_party/psyq/lib\libgpu.a(p06.o)
- .note          0x0000000000000828       0x74 third_party/psyq/lib\libgpu.a(p09.o)
- .note          0x000000000000089c       0x74 third_party/psyq/lib\libgpu.a(p10.o)
- .note          0x0000000000000910       0x74 third_party/psyq/lib\libgpu.a(p20.o)
- .note          0x0000000000000984       0x74 third_party/psyq/lib\libgpu.a(p26.o)
- .note          0x00000000000009f8       0x74 third_party/psyq/lib\libgpu.a(p41.o)
- .note          0x0000000000000a6c       0x74 third_party/psyq/lib\libgpu.a(sys.o)
- .note          0x0000000000000ae0       0x74 third_party/psyq/lib\libgpu.a(e00.o)
- .note          0x0000000000000b54       0x74 third_party/psyq/lib\libgpu.a(e02.o)
- .note          0x0000000000000bc8       0x74 third_party/psyq/lib\libgpu.a(p01.o)
- .note          0x0000000000000c3c       0x74 third_party/psyq/lib\libgs.a(2d_sp0.o)
- .note          0x0000000000000cb0       0x74 third_party/psyq/lib\libgs.a(global.o)
- .note          0x0000000000000d24       0x74 third_party/psyq/lib\libgs.a(gs_001.o)
- .note          0x0000000000000d98       0x74 third_party/psyq/lib\libgs.a(gs_0021.o)
- .note          0x0000000000000e0c       0x74 third_party/psyq/lib\libgs.a(gs_0022.o)
- .note          0x0000000000000e80       0x74 third_party/psyq/lib\libgs.a(gs_003.o)
- .note          0x0000000000000ef4       0x74 third_party/psyq/lib\libgs.a(gs_010.o)
- .note          0x0000000000000f68       0x74 third_party/psyq/lib\libgs.a(gs_103.o)
- .note          0x0000000000000fdc       0x74 third_party/psyq/lib\libgs.a(gs_104.o)
- .note          0x0000000000001050       0x74 third_party/psyq/lib\libgs.a(gs_107.o)
- .note          0x00000000000010c4       0x74 third_party/psyq/lib\libgs.a(gs_111.o)
- .note          0x0000000000001138       0x74 third_party/psyq/lib\libgs.a(gs_113.o)
- .note          0x00000000000011ac       0x74 third_party/psyq/lib\libgs.a(gs_121.o)
- .note          0x0000000000001220       0x74 third_party/psyq/lib\libgs.a(gs_122.o)
- .note          0x0000000000001294       0x74 third_party/psyq/lib\libgs.a(gs_124.o)
- .note          0x0000000000001308       0x74 third_party/psyq/lib\libgs.a(gs_128.o)
- .note          0x000000000000137c       0x74 third_party/psyq/lib\libgs.a(2d_com1.o)
- .note          0x00000000000013f0       0x74 third_party/psyq/lib\libgte.a(cmb_00.o)
- .note          0x0000000000001464       0x74 third_party/psyq/lib\libgte.a(fgo_01.o)
- .note          0x00000000000014d8       0x74 third_party/psyq/lib\libgte.a(msc00.o)
- .note          0x000000000000154c       0x74 third_party/psyq/lib\libgte.a(msc01.o)
- .note          0x00000000000015c0       0x74 third_party/psyq/lib\libgte.a(mtx_07.o)
- .note          0x0000000000001634       0x74 third_party/psyq/lib\libgte.a(mtx_08.o)
- .note          0x00000000000016a8       0x74 third_party/psyq/lib\libgte.a(mtx_09.o)
- .note          0x000000000000171c       0x74 third_party/psyq/lib\libgte.a(mtx_11.o)
- .note          0x0000000000001790       0x74 third_party/psyq/lib\libgte.a(mtx_12.o)
- .note          0x0000000000001804       0x74 third_party/psyq/lib\libgte.a(patchgte.o)
- .note          0x0000000000001878       0x74 third_party/psyq/lib\libgte.a(reg09.o)
- .note          0x00000000000018ec       0x74 third_party/psyq/lib\libgte.a(reg11.o)
- .note          0x0000000000001960       0x74 third_party/psyq/lib\libgte.a(reg12.o)
- .note          0x00000000000019d4       0x74 third_party/psyq/lib\libgte.a(sqrtbl.o)
- .note          0x0000000000001a48       0x74 third_party/psyq/lib\libgte.a(cstbl.o)
- .note          0x0000000000001abc       0x74 third_party/psyq/lib\libspu.a(s_gca.o)
- .note          0x0000000000001b30       0x74 third_party/psyq/lib\libspu.a(s_i.o)
- .note          0x0000000000001ba4       0x74 third_party/psyq/lib\libspu.a(s_ini.o)
- .note          0x0000000000001c18       0x74 third_party/psyq/lib\libspu.a(s_m.o)
- .note          0x0000000000001c8c       0x74 third_party/psyq/lib\libspu.a(s_rmp0.o)
- .note          0x0000000000001d00       0x74 third_party/psyq/lib\libspu.a(s_sccm.o)
- .note          0x0000000000001d74       0x74 third_party/psyq/lib\libspu.a(s_sccv.o)
- .note          0x0000000000001de8       0x74 third_party/psyq/lib\libspu.a(s_scmv.o)
- .note          0x0000000000001e5c       0x74 third_party/psyq/lib\libspu.a(spu.o)
- .note          0x0000000000001ed0       0x74 third_party/psyq/lib\libspu.a(s_dcb.o)
- .note          0x0000000000001f44       0x74 third_party/psyq/lib\libapi.a(a07.o)
- .note          0x0000000000001fb8       0x74 third_party/psyq/lib\libapi.a(a08.o)
- .note          0x000000000000202c       0x74 third_party/psyq/lib\libapi.a(a12.o)
- .note          0x00000000000020a0       0x74 third_party/psyq/lib\libapi.a(a22.o)
- .note          0x0000000000002114       0x74 third_party/psyq/lib\libapi.a(a23.o)
- .note          0x0000000000002188       0x74 third_party/psyq/lib\libapi.a(a24.o)
- .note          0x00000000000021fc       0x74 third_party/psyq/lib\libapi.a(a25.o)
- .note          0x0000000000002270       0x74 third_party/psyq/lib\libapi.a(a36.o)
- .note          0x00000000000022e4       0x74 third_party/psyq/lib\libapi.a(a37.o)
- .note          0x0000000000002358       0x74 third_party/psyq/lib\libapi.a(a91.o)
- .note          0x00000000000023cc       0x74 third_party/psyq/lib\libapi.a(c114.o)
- .note          0x0000000000002440       0x74 third_party/psyq/lib\libapi.a(c68.o)
- .note          0x00000000000024b4       0x74 third_party/psyq/lib\libapi.a(c73.o)
- .note          0x0000000000002528       0x74 third_party/psyq/lib\libapi.a(l10.o)
- .note          0x000000000000259c       0x74 third_party/psyq/lib\libapi.a(pad.o)
- .note          0x0000000000002610       0x74 third_party/psyq/lib\libapi.a(patch.o)
- .note          0x0000000000002684       0x74 third_party/psyq/lib\libapi.a(a18.o)
- .note          0x00000000000026f8       0x74 third_party/psyq/lib\libapi.a(a19.o)
- .note          0x000000000000276c       0x74 third_party/psyq/lib\libapi.a(a21.o)
- .note          0x00000000000027e0       0x74 third_party/psyq/lib\libapi.a(chclrpad.o)
- .note          0x0000000000002854       0x74 third_party/psyq/lib\libapi.a(l02.o)
- .note          0x00000000000028c8       0x74 third_party/psyq/lib\libapi.a(l03.o)
- .note          0x000000000000293c       0x74 third_party/psyq/lib\libc.a(a63.o)
- .note          0x00000000000029b0       0x74 third_party/psyq/lib\libc.a(c19.o)
- .note          0x0000000000002a24       0x74 third_party/psyq/lib\libc.a(c27.o)
- .note          0x0000000000002a98       0x74 third_party/psyq/lib\libc.a(c42.o)
- .note          0x0000000000002b0c       0x74 third_party/psyq/lib\libc.a(c43.o)
+ .note          0x00000000000001d0       0x74 third_party/psyq/lib\libcd.a(cdplay.o)
+ .note          0x0000000000000244       0x74 third_party/psyq/lib\libcd.a(event.o)
+ .note          0x00000000000002b8       0x74 third_party/psyq/lib\libcd.a(s_011.o)
+ .note          0x000000000000032c       0x74 third_party/psyq/lib\libcd.a(s_012.o)
+ .note          0x00000000000003a0       0x74 third_party/psyq/lib\libcd.a(s_015.o)
+ .note          0x0000000000000414       0x74 third_party/psyq/lib\libcd.a(s_016.o)
+ .note          0x0000000000000488       0x74 third_party/psyq/lib\libcd.a(toc.o)
+ .note          0x00000000000004fc       0x74 third_party/psyq/lib\libcd.a(bios_1.o)
+ .note          0x0000000000000570       0x74 third_party/psyq/lib\libcd.a(s_014.o)
+ .note          0x00000000000005e4       0x74 third_party/psyq/lib\libetc.a(intr.o)
+ .note          0x0000000000000658       0x74 third_party/psyq/lib\libetc.a(intr_dma.o)
+ .note          0x00000000000006cc       0x74 third_party/psyq/lib\libetc.a(intr_vb.o)
+ .note          0x0000000000000740       0x74 third_party/psyq/lib\libetc.a(pad.o)
+ .note          0x00000000000007b4       0x74 third_party/psyq/lib\libetc.a(vmode.o)
+ .note          0x0000000000000828       0x74 third_party/psyq/lib\libetc.a(vsync.o)
+ .note          0x000000000000089c       0x74 third_party/psyq/lib\libgpu.a(font.o)
+ .note          0x0000000000000910       0x74 third_party/psyq/lib\libgpu.a(p00.o)
+ .note          0x0000000000000984       0x74 third_party/psyq/lib\libgpu.a(p06.o)
+ .note          0x00000000000009f8       0x74 third_party/psyq/lib\libgpu.a(p09.o)
+ .note          0x0000000000000a6c       0x74 third_party/psyq/lib\libgpu.a(p10.o)
+ .note          0x0000000000000ae0       0x74 third_party/psyq/lib\libgpu.a(p20.o)
+ .note          0x0000000000000b54       0x74 third_party/psyq/lib\libgpu.a(p26.o)
+ .note          0x0000000000000bc8       0x74 third_party/psyq/lib\libgpu.a(p41.o)
+ .note          0x0000000000000c3c       0x74 third_party/psyq/lib\libgpu.a(sys.o)
+ .note          0x0000000000000cb0       0x74 third_party/psyq/lib\libgpu.a(e00.o)
+ .note          0x0000000000000d24       0x74 third_party/psyq/lib\libgpu.a(e02.o)
+ .note          0x0000000000000d98       0x74 third_party/psyq/lib\libgpu.a(p01.o)
+ .note          0x0000000000000e0c       0x74 third_party/psyq/lib\libgs.a(2d_sp0.o)
+ .note          0x0000000000000e80       0x74 third_party/psyq/lib\libgs.a(global.o)
+ .note          0x0000000000000ef4       0x74 third_party/psyq/lib\libgs.a(gs_001.o)
+ .note          0x0000000000000f68       0x74 third_party/psyq/lib\libgs.a(gs_0021.o)
+ .note          0x0000000000000fdc       0x74 third_party/psyq/lib\libgs.a(gs_0022.o)
+ .note          0x0000000000001050       0x74 third_party/psyq/lib\libgs.a(gs_003.o)
+ .note          0x00000000000010c4       0x74 third_party/psyq/lib\libgs.a(gs_010.o)
+ .note          0x0000000000001138       0x74 third_party/psyq/lib\libgs.a(gs_103.o)
+ .note          0x00000000000011ac       0x74 third_party/psyq/lib\libgs.a(gs_104.o)
+ .note          0x0000000000001220       0x74 third_party/psyq/lib\libgs.a(gs_107.o)
+ .note          0x0000000000001294       0x74 third_party/psyq/lib\libgs.a(gs_111.o)
+ .note          0x0000000000001308       0x74 third_party/psyq/lib\libgs.a(gs_113.o)
+ .note          0x000000000000137c       0x74 third_party/psyq/lib\libgs.a(gs_121.o)
+ .note          0x00000000000013f0       0x74 third_party/psyq/lib\libgs.a(gs_122.o)
+ .note          0x0000000000001464       0x74 third_party/psyq/lib\libgs.a(gs_124.o)
+ .note          0x00000000000014d8       0x74 third_party/psyq/lib\libgs.a(gs_128.o)
+ .note          0x000000000000154c       0x74 third_party/psyq/lib\libgs.a(2d_com1.o)
+ .note          0x00000000000015c0       0x74 third_party/psyq/lib\libgte.a(cmb_00.o)
+ .note          0x0000000000001634       0x74 third_party/psyq/lib\libgte.a(fgo_01.o)
+ .note          0x00000000000016a8       0x74 third_party/psyq/lib\libgte.a(msc00.o)
+ .note          0x000000000000171c       0x74 third_party/psyq/lib\libgte.a(msc01.o)
+ .note          0x0000000000001790       0x74 third_party/psyq/lib\libgte.a(mtx_07.o)
+ .note          0x0000000000001804       0x74 third_party/psyq/lib\libgte.a(mtx_08.o)
+ .note          0x0000000000001878       0x74 third_party/psyq/lib\libgte.a(mtx_09.o)
+ .note          0x00000000000018ec       0x74 third_party/psyq/lib\libgte.a(mtx_11.o)
+ .note          0x0000000000001960       0x74 third_party/psyq/lib\libgte.a(mtx_12.o)
+ .note          0x00000000000019d4       0x74 third_party/psyq/lib\libgte.a(patchgte.o)
+ .note          0x0000000000001a48       0x74 third_party/psyq/lib\libgte.a(reg09.o)
+ .note          0x0000000000001abc       0x74 third_party/psyq/lib\libgte.a(reg11.o)
+ .note          0x0000000000001b30       0x74 third_party/psyq/lib\libgte.a(reg12.o)
+ .note          0x0000000000001ba4       0x74 third_party/psyq/lib\libgte.a(sqrtbl.o)
+ .note          0x0000000000001c18       0x74 third_party/psyq/lib\libgte.a(cstbl.o)
+ .note          0x0000000000001c8c       0x74 third_party/psyq/lib\libspu.a(s_gca.o)
+ .note          0x0000000000001d00       0x74 third_party/psyq/lib\libspu.a(s_i.o)
+ .note          0x0000000000001d74       0x74 third_party/psyq/lib\libspu.a(s_ini.o)
+ .note          0x0000000000001de8       0x74 third_party/psyq/lib\libspu.a(s_m.o)
+ .note          0x0000000000001e5c       0x74 third_party/psyq/lib\libspu.a(s_rmp0.o)
+ .note          0x0000000000001ed0       0x74 third_party/psyq/lib\libspu.a(s_sccm.o)
+ .note          0x0000000000001f44       0x74 third_party/psyq/lib\libspu.a(s_sccv.o)
+ .note          0x0000000000001fb8       0x74 third_party/psyq/lib\libspu.a(s_scmv.o)
+ .note          0x000000000000202c       0x74 third_party/psyq/lib\libspu.a(spu.o)
+ .note          0x00000000000020a0       0x74 third_party/psyq/lib\libspu.a(s_dcb.o)
+ .note          0x0000000000002114       0x74 third_party/psyq/lib\libapi.a(a07.o)
+ .note          0x0000000000002188       0x74 third_party/psyq/lib\libapi.a(a08.o)
+ .note          0x00000000000021fc       0x74 third_party/psyq/lib\libapi.a(a12.o)
+ .note          0x0000000000002270       0x74 third_party/psyq/lib\libapi.a(a22.o)
+ .note          0x00000000000022e4       0x74 third_party/psyq/lib\libapi.a(a23.o)
+ .note          0x0000000000002358       0x74 third_party/psyq/lib\libapi.a(a24.o)
+ .note          0x00000000000023cc       0x74 third_party/psyq/lib\libapi.a(a25.o)
+ .note          0x0000000000002440       0x74 third_party/psyq/lib\libapi.a(a36.o)
+ .note          0x00000000000024b4       0x74 third_party/psyq/lib\libapi.a(a37.o)
+ .note          0x0000000000002528       0x74 third_party/psyq/lib\libapi.a(a91.o)
+ .note          0x000000000000259c       0x74 third_party/psyq/lib\libapi.a(c114.o)
+ .note          0x0000000000002610       0x74 third_party/psyq/lib\libapi.a(c68.o)
+ .note          0x0000000000002684       0x74 third_party/psyq/lib\libapi.a(c73.o)
+ .note          0x00000000000026f8       0x74 third_party/psyq/lib\libapi.a(l10.o)
+ .note          0x000000000000276c       0x74 third_party/psyq/lib\libapi.a(pad.o)
+ .note          0x00000000000027e0       0x74 third_party/psyq/lib\libapi.a(patch.o)
+ .note          0x0000000000002854       0x74 third_party/psyq/lib\libapi.a(a18.o)
+ .note          0x00000000000028c8       0x74 third_party/psyq/lib\libapi.a(a19.o)
+ .note          0x000000000000293c       0x74 third_party/psyq/lib\libapi.a(a21.o)
+ .note          0x00000000000029b0       0x74 third_party/psyq/lib\libapi.a(chclrpad.o)
+ .note          0x0000000000002a24       0x74 third_party/psyq/lib\libapi.a(l02.o)
+ .note          0x0000000000002a98       0x74 third_party/psyq/lib\libapi.a(l03.o)
+ .note          0x0000000000002b0c       0x74 third_party/psyq/lib\libc.a(a63.o)
+ .note          0x0000000000002b80       0x74 third_party/psyq/lib\libc.a(c19.o)
+ .note          0x0000000000002bf4       0x74 third_party/psyq/lib\libc.a(c27.o)
+ .note          0x0000000000002c68       0x74 third_party/psyq/lib\libc.a(c42.o)
+ .note          0x0000000000002cdc       0x74 third_party/psyq/lib\libc.a(c43.o)
 
-.debug_line     0x0000000000000000      0xca0
+.debug_line     0x0000000000000000      0xe62
  .debug_line    0x0000000000000000       0x5b third_party/nugget/common/crt0/crt0.o
- .debug_line    0x000000000000005b      0xb09 main.o
- .debug_line    0x0000000000000b64      0x13c tools.o
+ .debug_line    0x000000000000005b      0xc46 main.o
+ .debug_line    0x0000000000000ca1      0x1c1 tools.o
 
 .debug_line_str
                 0x0000000000000000       0x26
@@ -1054,45 +1103,45 @@ OUTPUT(fuckityfuckity.elf elf32-littlemips)
                 0x0000000000000000       0x26 third_party/nugget/common/crt0/crt0.o
                                          0x4c (size before relaxing)
 
-.debug_info     0x0000000000000000     0x1c8d
+.debug_info     0x0000000000000000     0x20e1
  .debug_info    0x0000000000000000       0x24 third_party/nugget/common/crt0/crt0.o
- .debug_info    0x0000000000000024     0x19f1 main.o
- .debug_info    0x0000000000001a15      0x278 tools.o
+ .debug_info    0x0000000000000024     0x1ce1 main.o
+ .debug_info    0x0000000000001d05      0x3dc tools.o
 
-.debug_abbrev   0x0000000000000000      0x589
+.debug_abbrev   0x0000000000000000      0x6ad
  .debug_abbrev  0x0000000000000000       0x14 third_party/nugget/common/crt0/crt0.o
- .debug_abbrev  0x0000000000000014      0x3bc main.o
- .debug_abbrev  0x00000000000003d0      0x1b9 tools.o
+ .debug_abbrev  0x0000000000000014      0x45d main.o
+ .debug_abbrev  0x0000000000000471      0x23c tools.o
 
-.debug_aranges  0x0000000000000000       0xd0
+.debug_aranges  0x0000000000000000       0xe0
  .debug_aranges
                 0x0000000000000000       0x20 third_party/nugget/common/crt0/crt0.o
  .debug_aranges
                 0x0000000000000020       0x80 main.o
  .debug_aranges
-                0x00000000000000a0       0x30 tools.o
+                0x00000000000000a0       0x40 tools.o
 
-.debug_str      0x0000000000000000      0x83f
+.debug_str      0x0000000000000000      0x8a6
  .debug_str     0x0000000000000000       0x3b third_party/nugget/common/crt0/crt0.o
- .debug_str     0x000000000000003b      0x7d8 main.o
-                                        0x852 (size before relaxing)
- .debug_str     0x0000000000000813       0x2c tools.o
-                                        0x23b (size before relaxing)
+ .debug_str     0x000000000000003b      0x833 main.o
+                                        0x8ad (size before relaxing)
+ .debug_str     0x000000000000086e       0x38 tools.o
+                                        0x2bc (size before relaxing)
 
 .debug_loclists
-                0x0000000000000000      0x4ad
+                0x0000000000000000      0x606
  .debug_loclists
-                0x0000000000000000      0x451 main.o
+                0x0000000000000000      0x58e main.o
  .debug_loclists
-                0x0000000000000451       0x5c tools.o
+                0x000000000000058e       0x78 tools.o
 
 .debug_rnglists
-                0x0000000000000000      0x12a
+                0x0000000000000000      0x167
  .debug_rnglists
-                0x0000000000000000       0xff main.o
+                0x0000000000000000      0x130 main.o
  .debug_rnglists
-                0x00000000000000ff       0x2b tools.o
+                0x0000000000000130       0x37 tools.o
 
-.debug_frame    0x0000000000000000      0x28c
- .debug_frame   0x0000000000000000      0x234 main.o
- .debug_frame   0x0000000000000234       0x58 tools.o
+.debug_frame    0x0000000000000000      0x2ec
+ .debug_frame   0x0000000000000000      0x25c main.o
+ .debug_frame   0x000000000000025c       0x90 tools.o
