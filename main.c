@@ -60,15 +60,14 @@
     u_char cdInfoGetlocp[8];
     int currentbuffer; // double buffer holder
     int decimalValues[8] = {0x00};               // to hold decimal values from GETLOCP after conversion from BCD (uchar?)
-    int CdVolume = MAX_VOLUME_CD;
-    u_char shuffle = 0;
+    bool shuffle = false;
     u_char result[8];                    // general response storage
     int numTracks = 0x00;                // for storing number of audio tracks found on CD
     int debounceTimer= 0;                // controller input debounce timer
     unsigned int currentTrackTimeInSeconds = 0;  // to hold current track time in seconds
     int shuffledTracks[101];    // Max tracks 100, for shuffle/ built in CdPlay function we need an extra element to contain zero (could have implemented shuffle manually though)
     int tracksPlayed;
-    int repeat = 1;                     //track if repeat mode is on (repeat the CD when finished), on by default
+    bool repeat = true;                     //track if repeat mode is on (repeat the CD when finished), on by default
     
     typedef struct 
     {

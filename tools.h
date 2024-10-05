@@ -22,7 +22,7 @@ void display();
 void initFont();
 
 // shared variables
-extern u_char shuffle;
+extern bool shuffle;
 extern CdlLOC loc[100];
 extern u_char result[8];  
 extern CVECTOR fntColor;    // Foreground color
