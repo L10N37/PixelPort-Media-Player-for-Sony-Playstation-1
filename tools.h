@@ -37,6 +37,7 @@ extern int shuffledTracks[101];
 extern int decimalValues[8];
 extern u_char result[8];
 extern bool repeat;
+extern bool shuffleSelectionBreakEarly;
 
 // for readability when accessing decimalValues variable
 typedef enum {

@@ -53,53 +53,6 @@ void drawTextAtPosition(int x, int y, const char* text) {
     FntPrint(text);
 }
 
-void selectCustomTracks() {
-    int selectedTrack = 1; // Start selection on track 1
-    int i = 1; // Index for shuffledTracks array
-    int controllerDebounce = 0; // Debounce counter
-    int button = 0; // Variable for button state
-    const int debounceDelay = 7; // Controller debounce (less = more sensitive)
-
-    shuffledTracks[0] = numTracks; // Set the first element of shuffledTracks to the number of tracks
-
-    while (i < numTracks + 1) { // Continue until all tracks are selected (1 to numTracks inclusive)
-        // Display the current selection
-        FntPrint("\n\n\n\n\n\n");
-        FntPrint("\nSelect Track %d: Track %d of %d", i, selectedTrack, numTracks);
-        display(); // Update the display
-
-        // Read the button state with debounce logic
-        if (controllerDebounce >= debounceDelay) {
-            button = PadRead(0); // Read pad input
-            controllerDebounce = 0; // Reset debounce counter
-        } else {
-            button = 0; // Reset button state if debounce delay hasn't passed
-        }
-        controllerDebounce++;
-
-        // Check for up or down input to toggle selection
-        if (button == PADLup && selectedTrack < numTracks) {
-            selectedTrack++; // Go up the track list
-        } 
-        else if (button == PADLdown && selectedTrack > 1) {
-            selectedTrack--; // Go down the track list
-        }
-        
-        // Handle selection confirmation
-        if (button == PADRdown) {
-            // Store selected track in shuffledTracks
-            shuffledTracks[i] = selectedTrack; // Store the selected track
-            display(); // Update the display
-            i++;
-        }
-        
-        // Exit selection early
-        if (button == PADRright) {
-            break; 
-        }
-    }
-}
-
  void shuffleFunction() {
         long rootCounterValue = GetRCnt(0);  // Get the root counter value
 
@@ -131,13 +84,61 @@ void selectCustomTracks() {
         }
     }
 
+void selectCustomTracks() {
+    int selectedTrack = 1; // Start selection on track 1
+    int i = 1; // Index for shuffledTracks array
+    int controllerDebounce = 0; // Debounce counter
+    int button = 0; // Variable for button state
+    const int debounceDelay = 7; // Controller debounce (less = more sensitive)
+
+    shuffledTracks[0] = numTracks; // Set the first element of shuffledTracks to the number of tracks
+
+    while (i < numTracks + 1) { // Continue until all tracks are selected (1 to numTracks inclusive)
+        // Display the current selection
+        FntPrint("\n\n\n\n\n\n");
+        FntPrint("\n    Select Track %d: Track %d of %d", i, selectedTrack, numTracks);
+        display(); // Update the display
+
+        // Read the button state with debounce logic
+        if (controllerDebounce >= debounceDelay) {
+            button = PadRead(0); // Read pad input
+            controllerDebounce = 0; // Reset debounce counter
+        } else {
+            button = 0; // Reset button state if debounce delay hasn't passed
+        }
+        controllerDebounce++;
+
+        // Check for up or down input to toggle selection
+        if (button == PADLup && selectedTrack < numTracks) {
+            selectedTrack++; // Go up the track list
+        } 
+        else if (button == PADLdown && selectedTrack > 1) {
+            selectedTrack--; // Go down the track list
+        }
+        
+        // Handle selection confirmation
+        if (button == PADRdown) {
+            // Store selected track in shuffledTracks
+            shuffledTracks[i] = selectedTrack; // Store the selected track
+            display(); // Update the display
+            i++;
+        }
+        
+        // Exit selection early
+        if (button == PADRright) {
+            shuffleSelectionBreakEarly= true;
+            return;
+        }
+    }
+}
+
 int shuffleModeSelection(int button) {
     static const char* shuffleModes[] = {"RANDOM", "CUSTOM"};
     bool selection = 0; // 0 for RANDOM, 1 for CUSTOM, random default
 
     // Display the initial selection
     FntPrint("\n\n\n\n\n\n");
-    FntPrint("\nShuffle mode selection: <- %s ->", shuffleModes[selection]);
+    FntPrint("\n    Shuffle Mode: <- %s ->", shuffleModes[selection]);
     display(); // Update the display
 
     while (1) {
@@ -147,20 +148,25 @@ int shuffleModeSelection(int button) {
         if (button == PADLleft) {
             selection = 0; // RANDOM
             FntPrint("\n\n\n\n\n\n");
-            FntPrint("\nShuffle mode selection: <- %s ->", shuffleModes[selection]);
+            FntPrint("\n    Shuffle mode: <- %s ->", shuffleModes[selection]);
             display(); // Update the display
         } else if (button == PADLright) {
             selection = 1; // CUSTOM
             FntPrint("\n\n\n\n\n\n");
-            FntPrint("\nShuffle mode selection: <- %s ->", shuffleModes[selection]);
+            FntPrint("\n    Shuffle mode: <- %s ->", shuffleModes[selection]);
             display(); // Update the display
         }
-        if (button == PADRdown) {
+        else if (button == PADRdown) {
             // If 'X' is selected, return the current selection
             return selection; // 0 for RANDOM, 1 for CUSTOM
         }
+        // Exit selection early
+        else if (button == PADRright) {
+            shuffleSelectionBreakEarly= true;
+            return 0;
+            }
+        }
     }
-}
 
 void checkDriveLidStatus(){
 

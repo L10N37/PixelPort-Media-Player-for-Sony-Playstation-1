@@ -32,9 +32,6 @@
     #include "common.h"
     // TIM image
     #include "background.h"
-    #include "libetc.h"
-    #include "libgpu.h"
-    #include "tools.h"
 
     #define OT_LENGTH 1                             // ordering table length
     #define PACKETMAX (300)                         // the max num of objects
@@ -71,6 +68,8 @@
     bool repeat = true;                  // repeat mode flag (repeat the CD when finished), on by default
     bool shuffle = false;                // shuffle mode flag
     bool selectedShuffleMode = 0;        // shuffle mode flag, 0 for random, 1 for custom
+    bool shuffleSelectionBreakEarly = false;
+    bool reverb = false;
     
     typedef struct 
     {
@@ -98,7 +97,6 @@
         printf("CD Volume Left: %d\n", attr.cd.volume.left), printf("CD Volume Right: %d\n", attr.cd.volume.right);
         printf("Reverb (on/off): %x\n", attr.cd.reverb);
         printf("CD Mix (on/off): %x\n", attr.cd.mix);
-
     }
         
     void readControllerInput()
@@ -178,13 +176,14 @@
             /////////////////////////////////////      
             case PADRup:
 
+            shuffleSelectionBreakEarly = false;
             printf("\nShuffle button pressed (triangle)\n");
 
             if (!shuffle) // shuffle is off, turn it on with chosen mode selection
             { 
                selectedShuffleMode = shuffleModeSelection(pad); // grab chosen mode
 
-                if (!selectedShuffleMode) // shuffle mode chosen: RANDOM
+                if (!selectedShuffleMode && !shuffleSelectionBreakEarly) // shuffle mode chosen: RANDOM
                 { 
                 CdControlF(CdlStop, 0); // smoother?
                 shuffleFunction(); // Shuffle the tracks
@@ -198,7 +197,7 @@
                  return; // break out of the function so we don't turn off shuffle mode below 
                 }
                 
-                else if (selectedShuffleMode) // shuffle mode chosen : CUSTOM
+                if (selectedShuffleMode && !shuffleSelectionBreakEarly) // shuffle mode chosen : CUSTOM
                 {
                 selectCustomTracks();
                 // Call CdPlay with repeat or stop mode
@@ -218,10 +217,10 @@
                     printf("Track %d: %d\n", i, shuffledTracks[i]);
                 }
                 return; // break out of the function so we don't turn off shuffle mode below 
-                }
+                }   
             }
 
-            if (shuffle) // if shuffle is on, turn it off and reset the shuffledTracks array
+            if (shuffle || !shuffleSelectionBreakEarly) // if shuffle is on or exit before selecting mode/ tracks, turn it off and reset the shuffledTracks array
             {
                 // Reset shuffledTracks array
                 for (int i = 0; i < 101; i++) 
@@ -290,9 +289,17 @@
             CdControlF (CdlPlay, 0); // Resume play, button released
                 break;
             /////////////////////////////////////   
-            case PADL2:
-                        // L2
-                break;
+            case PADL2: // L2
+                printf("\nL2 Pressed");
+                 // p1060 LibRef47.pdf
+            printf("\nL2 Pressed");
+            if (reverb) {
+                SpuSetCommonCDReverb(0);
+            } else {
+                SpuSetCommonCDReverb(1);
+            }
+            reverb = !reverb; // Toggle the reverb state
+            break;
             /////////////////////////////////////   
             case PADR1:
             CdControlF (CdlForward, 0);
@@ -335,7 +342,7 @@
 
         FntLoad(960, 256);  // Load basic font pattern
         FntLoad(FONTX, FONTY);                // Load font to VRAM at FONTX, FONTY
-        FntOpen(10, 10, 320, 240, 0, 512);    // FntOpen(x, y, width, height, black_bg, max. nbr. chars)
+        FntOpen(10, 15, 320, 240, 0, 512);    // FntOpen(x, y, width, height, black_bg, max. nbr. chars)
 
         // Update RGB values based on hue for smooth transitions
         fontColours[colorIndex] += direction[colorIndex] * step;
@@ -705,6 +712,7 @@
         }
 
     void playerInformationLogic() {
+
         u_char currentValues[8] = {0x00};
         CdControlB(CdlGetlocP, 0, currentValues);
         convertBcdValuesToDecimal(currentValues, decimalValues, 8); // convert return data from CdGetLocP from BCD to decimal
@@ -715,25 +723,28 @@
         //printf("\nCdlNop: %x", cdlNopStatusByte); //cdlNopStatusByte: 0
 
         // Print the CURRENT track information if a disc is playing or in fast track forward/reverse, otherwise zero them out
-        if (cdlNopStatusByte == CdlStatPlay + CdlStatStandby || cdlNopStatusByte == 2){ // fast foward / reverse, result[0] is 2
-        FntPrint("           %0d\n\n", numTracks);             // Track Count main screen 
-        FntPrint("           %0d\n\n", decimalValues[track]); // Current Track main screen
-        }
-        else{
-        FntPrint("           %0d\n\n", 0);
-        FntPrint("           %0d\n\n", 0); 
+        if (cdlNopStatusByte == CdlStatPlay + CdlStatStandby || cdlNopStatusByte == 2) { // fast forward/reverse, result[0] is 2
+            FntPrint("    Track: %0d/%0d  %02d:%02d\n\n", decimalValues[track], numTracks, decimalValues[min], decimalValues[sec]);
+        } else {
+            FntPrint("    Track: %0d/%0d  %02d:%02d\n\n", 0, 0, 0, 0);
         }
 
         // Print shuffle status
-        if (shuffle == 0) {
-            FntPrint("           OFF\n\n"); // Shuffle is off
-        } else {
+        if (!shuffle) {
+            FntPrint("    Shuffle: OFF\n\n"); // Shuffle is off
+        } else if (shuffle) {
             // Print ON and the selected shuffle mode
-            FntPrint("           ON: %s\n\n", selectedShuffleMode == 0 ? "RANDOM" : "CUSTOM");
+            FntPrint("    Shuffle: ON- %s\n\n", selectedShuffleMode == 0 ? "RANDOM" : "CUSTOM");
         }
 
-        FntPrint("           %02d:%02d\n", decimalValues[min], decimalValues[sec]); // time played, main screen
-
+        // Print reverb status
+        if (!reverb) {
+            FntPrint("    Reverb: OFF\n\n"); // Reverb is off
+        } else if (reverb) {
+            // Print ON
+            FntPrint("    Reverb: ON\n\n");
+        }
+        
         // progress bar spacing
         FntPrint("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
         
@@ -819,7 +830,6 @@
 fix shuffle bug where landing on final track in shuffledTrack array mid CD won't allow a manual (Right Dpad) track increment to next track/ array element of shuffledTrack
 Unsure why it even increments correctly through the array up until that track comes up, it might be a bug in the SDK
 
-add reverb on / off
 add L/R balance
 add volume level displays
 add repeat on/off
