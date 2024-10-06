@@ -3,7 +3,7 @@
 
 #include "common.h"
 
-// Define font coordinates
+// Define font coordinates- remove this later and draw everything at manually selected locations with 'void drawTextAtPosition(int x, int y, const char* text)' in tools.c
 #define FONTX   960
 #define FONTY   0
 
@@ -20,6 +20,7 @@ void getTableOfContents();
 void playerInformationLogic();
 void display();
 void initFont();
+void drawTextAtPosition(int x, int y, const char* text);
 
 // shared variables
 extern bool shuffle;

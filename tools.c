@@ -1,8 +1,6 @@
 #include "tools.h"
 #include "libcd.h"
-#include "types.h"
-#include <stdbool.h>
-#include <stdio.h>
+#include "libgpu.h"
 
 // Global instances for font colors
 CVECTOR fntColor;      // Foreground color instance
@@ -46,20 +44,23 @@ int isValueInArray(int value, int *array, int size) {
     return 0; // Value not found (false)
 }
 
+// 320x240: (0, 0) for the top-left corner,  (319, 239) for the bottom-right corner.
+void drawTextAtPosition(int x, int y, const char* text) {
+    FntLoad(960, 256);  // Load basic font pattern
+    FntLoad(x, y);               
+    FntOpen(x, y, 320, 240, 0, 512);
+    // print at parameters passed to function
+    FntPrint(text);
+}
+
 void checkDriveLidStatus(){
 
     #define subsequentLidClose 0
-    bool lidOpenAtBoot= false;
 
     ////////////  check cdlNopStatusByte ////////////
     CdControlB( CdlNop, 0, result);
     ////////////////////////////////////////////////
-
-        // bail out of the function if lid open at boot/ app launch - prevents app lock up while searching for TOC (blank screen) until lid closure
-        if (cdlNopStatusByte == CdlStatShellOpen && lidOpenAtBoot){
-        lidOpenAtBoot=!lidOpenAtBoot;
-        return;
-        }
+    //printf("\nCheck of result[0] (CdlNop): %x", cdlNopStatusByte);
 
         if (shuffle && cdlNopStatusByte == CdlStatShellOpen) // if shuffle was on when you opened the drive lid
         {                                          
@@ -72,12 +73,12 @@ void checkDriveLidStatus(){
         }
 
     //  cdlNopStatusByte returns 0x02 (CdlStatStandby) if lid is closed at boot, 0x00 if closed after boot
-    if  ((cdlNopStatusByte == CdlStatStandby && !shuffle) || (cdlNopStatusByte == subsequentLidClose && !shuffle))
+    if  (cdlNopStatusByte == CdlStatStandby && !shuffle || cdlNopStatusByte == subsequentLidClose && !shuffle || cdlNopStatusByte == CdlStatShellOpen)
 
     {   
-        numTracks = 0;                         // init numTracks to 0;
+        numTracks = 0; // init numTracks to 0;
         if (cdlNopStatusByte == CdlStatShellOpen) printf("\ndrive lid open- result[0] (CdlNop): %x", cdlNopStatusByte); //cdlNopStatusByte: 0
-        while (cdlNopStatusByte == CdlStatShellOpen){initFont(); display();}; //hang here if lid is open
+        while (cdlNopStatusByte == CdlStatShellOpen){initFont(); display(); CdControlB( CdlNop, 0, result);}; //hang here if lid is open
         if (cdlNopStatusByte == subsequentLidClose) printf("\ngetting toc - result[0] (CdlNop): %x", cdlNopStatusByte); //cdlNopStatusByte: 0
         if (cdlNopStatusByte == CdlStatStandby) printf("\nbooted up with drive lid closed, getting toc - result0 (CdlNop): %x", cdlNopStatusByte); // cdlNopStatusByte: 2
         while ((numTracks = CdGetToc(loc)) == 0){initFont(); display();}; // lock here until TOC is retrieved

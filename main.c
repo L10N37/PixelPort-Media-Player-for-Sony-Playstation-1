@@ -34,9 +34,7 @@
     #include "common.h"
     // TIM image
     #include "background.h"
-    #include <stdbool.h>
-
- 
+#include "tools.h"
 
     #define OT_LENGTH 1                             // ordering table length
     #define PACKETMAX (300)                         // the max num of objects
@@ -55,25 +53,269 @@
     unsigned char image[];       // bg image array converted from TIM file
 
     // Globals -----
-    long int image1_addr;				// DRAM address storage of TIM file
     CdlLOC loc[100];                    // Array to store locations of tracks
+
     u_char cdInfoGetlocp[8];
-    int currentbuffer; // double buffer holder
-    int decimalValues[8] = {0x00};               // to hold decimal values from GETLOCP after conversion from BCD (uchar?)
-    bool shuffle = false;
     u_char result[8];                    // general response storage
+
+    long int image1_addr;				// DRAM address storage of TIM file
+
+    unsigned int currentTrackTimeInSeconds = 0;  // to hold current track time in seconds
+
+    int currentbuffer; // double buffer holder
+    int decimalValues[8] = {0x00};       // to hold decimal values from GETLOCP after conversion from BCD (uchar?)
     int numTracks = 0x00;                // for storing number of audio tracks found on CD
     int debounceTimer= 0;                // controller input debounce timer
-    unsigned int currentTrackTimeInSeconds = 0;  // to hold current track time in seconds
-    int shuffledTracks[101];    // Max tracks 100, for shuffle/ built in CdPlay function we need an extra element to contain zero (could have implemented shuffle manually though)
-    int tracksPlayed;
-    bool repeat = true;                     //track if repeat mode is on (repeat the CD when finished), on by default
+    int shuffledTracks[101];             // Max tracks 100, for shuffle/ built in CdPlay function we need an extra element to contain zero (could have implemented shuffle manually though)
+
+    bool repeat = true;                  // repeat mode flag (repeat the CD when finished), on by default
+    bool shuffle = false;                // shuffle mode flag
     
     typedef struct 
     {
                 int mins;
                 int seconds;
     } TrackTime;
+
+    void shuffleFunction() {
+        long rootCounterValue = GetRCnt(0);  // Get the root counter value
+
+        if (rootCounterValue != -1) {
+            srand((unsigned int)rootCounterValue);  // Seed the random number generator
+        } else {
+            printf("Error: Failed to get root counter value.\n");
+            return; // Exit if seeding fails
+        }
+
+        // Start from index 1 to store track numbers
+        for (int i = 1; i <= numTracks; i++) { // Fill from index 1 to numTracks
+            int newTrack;
+            do {
+                newTrack = rand() % numTracks + 1; // Random value between 1 and numTracks
+            } while (isValueInArray(newTrack, shuffledTracks, i)); // Ensure unique values
+
+            shuffledTracks[i] = newTrack; // Store the unique value
+            printf("\nTrack Order: %d\n", shuffledTracks[i]);
+        }
+
+        shuffledTracks[0] = numTracks; // Store total track count in index 0
+        shuffledTracks[numTracks + 1] = 0; // Zero out the final array element (numTracks + 1)
+
+        // Call CdPlay with repeat or stop mode
+        if (repeat == 1) {
+            CdPlay(2, shuffledTracks, decimalValues[index]); // Play with repeat
+            printf("Shuffled tracks (repeat mode): 0x%02X\n", decimalValues[track]);
+        } else if (repeat == 0) {
+            CdPlay(1, shuffledTracks, decimalValues[index]); // Play and stop at the end
+            printf("Shuffled tracks (stop mode): 0x%02X\n", decimalValues[track]);
+        }
+    }
+    
+    void initSpu(int applyVolumeCd, int applyVolumeMaster) 
+    {
+/*
+        The volume mode is ‘direct mode’ and the range of the values which can be set to the mvolL and mvolR
+        volumes is equal to that of the ‘direct mode’ in SpuSetVoiceAttr() (-0x4000 to 0x3fff).
+*/      SpuSetCommonMasterVolume(applyVolumeMaster, applyVolumeMaster);
+
+        //Set independently for left and right in the range -0x8000 - 0x7fff. If volume is negative, the phase is inverted.
+        SpuSetCommonCDVolume(applyVolumeCd, applyVolumeCd);
+
+        // No output without CD Mixing turned on
+        SpuSetCommonCDMix(1);
+
+        // get SPU Attributes for printing
+        SpuCommonAttr attr;
+        SpuGetCommonAttr(&attr);
+        // current CD volume
+        printf("CD Volume Left: %d\n", attr.cd.volume.left), printf("CD Volume Right: %d\n", attr.cd.volume.right);
+        printf("Reverb (on/off): %x\n", attr.cd.reverb);
+        printf("CD Mix (on/off): %x\n", attr.cd.mix);
+
+    }
+        
+    void readControllerInput()
+    {
+    
+    int pad = 0x00;
+    u_char trackValue;
+    static int newVolumeLevelCd = MAX_VOLUME_CD;
+    static int newVolumeLevelMaster = MAX_VOLUME_MASTER;
+    trackValue = decimalValues[track]; 
+    
+    //slow down the polling
+    if (debounceTimer%7 == 0)
+    {                               
+    pad = PadRead(0); // Read pads input. id is unused, always 0.
+    }
+    debounceTimer++;
+
+        switch (pad) {
+            /////////////////////////////////////   
+            case PADLup:
+
+                if (newVolumeLevelCd < MAX_VOLUME_CD) 
+                {
+                newVolumeLevelCd+=450; //tweak the steps!
+                initSpu(newVolumeLevelCd, newVolumeLevelMaster);
+                initSpu(newVolumeLevelCd, newVolumeLevelMaster);
+                }
+                printf("\nUP D-Pad pressed, volume increased\n");
+                break;
+            /////////////////////////////////////   
+            case PADLdown:
+
+                if (newVolumeLevelCd > 0) 
+                {
+                newVolumeLevelCd-=450; //tweak the steps!
+                initSpu(newVolumeLevelCd, newVolumeLevelMaster);
+                initSpu(newVolumeLevelCd, newVolumeLevelMaster);
+                }
+                printf("\nDown D-Pad pressed, volume decreased\n");
+                break;
+            /////////////////////////////////////   
+            case PADLright: // Increment the track with wrap around to first track
+
+                // Increment track value if not at last track
+                if (trackValue < numTracks)
+                {
+                trackValue++;
+                }
+                // else if last track, go back to track 1, as long as shuffle isn't on
+                if (trackValue == numTracks && shuffle == 0)
+                {
+                trackValue = 1;
+                }
+                CdControlF (CdlPlay, (u_char *)&loc[trackValue]);
+                printf("\nTrack value: %d\n", trackValue);
+                printf("\nRight D-Pad pressed, increment track");
+                break;
+            /////////////////////////////////////   
+            case PADLleft: // Decrement the track with wrap around to final track
+
+                // if playing first track, go to final track, if shuffle is off!
+                if (trackValue == 1 && shuffle == 0)
+                {
+                trackValue = numTracks;
+                CdControlF (CdlPlay, (u_char *)&loc[trackValue]);
+                }
+                // else decrement track value
+                else if (trackValue <= numTracks && trackValue != 1 && shuffle == 0) //make sure shuffle isn't on
+                {
+                trackValue--;
+                CdControlF (CdlPlay, (u_char *)&loc[trackValue]);
+                }
+                printf("\nTrack value: %d\n", trackValue);
+                printf("\nLeft D-Pad pressed, decrement track"); 
+                break;
+            /////////////////////////////////////      
+            case PADRup:
+                if (shuffle == false)
+                {
+                    
+                for (int i = 0; i < 101; i++) { // reset shuffledTracks array or locks up after turning on/off then on again
+                shuffledTracks[i] = 0;
+                }
+
+                CdControlF (CdlStop, 0); // smoother?
+                shuffleFunction(numTracks, shuffledTracks);
+                shuffle = true;
+                }
+                else if (shuffle == true) // turn off shuffle
+                {
+                shuffle = false;
+                CdPlay(0, NULL, 0);
+                CdControlF (CdlPlay, (u_char *)&loc[trackValue]); //resume playing
+                }
+                break;
+            /////////////////////////////////////   
+            case PADRdown: // Play/Pause
+
+            static bool pause = false;
+            if (pause == false) 
+            {
+            CdControlF (CdlPause, 0);
+            pause = 1;
+            printf("\nPAUSED");
+            
+            }
+            else if (pause == true)
+            {
+            CdControlF (CdlPlay, 0);
+            pause = 0;
+            printf("\nRESUMING PLAY FROM PAUSE");
+            
+            }
+            break;
+            /////////////////////////////////////   
+            case PADRright: //Mute/ Demute
+
+            static bool mute = false;
+            if (mute == false) 
+            {
+            CdControlF (CdlMute, 0);
+            mute = 1;
+            printf("\nAudio Muted");
+            
+            }
+            else if (mute == true)
+            {
+            CdControlF (CdlDemute, 0);
+            mute = false;
+            printf("\nAudio Demuted");
+            }
+            break;
+            /////////////////////////////////////   
+            case PADRleft:
+                        //   sq btn
+                break;
+            /////////////////////////////////////   
+            case PADL1:
+            CdControlF (CdlBackward, 0);
+            printf("\nrewinding");
+            while (pad == PADL1)
+            {
+                pad = PadRead(0);        // Keep re-reading the pad to check for release of forward
+                playerInformationLogic();   //keep updating the track information
+                display();                  // keep updating the display
+            }               
+            printf("\nrewind released");
+            CdControlF (CdlPlay, 0); // Resume play, button released
+                break;
+            /////////////////////////////////////   
+            case PADL2:
+                        // L2
+                break;
+            /////////////////////////////////////   
+            case PADR1:
+            CdControlF (CdlForward, 0);
+            printf("\nfast forward");
+            while (pad == PADR1)
+            {
+                pad = PadRead(0); // Keep re-reading the pad to check for release of forward
+                playerInformationLogic(); //keep updating the track information
+                display();                // keep updating the display
+            }               
+            printf("\nfast forward released");
+            CdControlF (CdlPlay, 0); // Resume play, button released
+                break;
+            /////////////////////////////////////   
+            case PADR2:
+                        // R2
+                break;
+
+            case PADstart:
+
+                break;
+
+            case PADselect:
+
+                break;
+
+            default:
+                break;
+        }
+      }
     
     void initFont()
     {
@@ -288,257 +530,15 @@
 
     }
 
-    void printSpu()
-    {
-
-    // get SPU Attributes for printing
-    SpuCommonAttr attr;
-    SpuGetCommonAttr(&attr);
-    // current CD volume
-    printf("CD Volume Left: %d\n", attr.cd.volume.left), printf("CD Volume Right: %d\n", attr.cd.volume.right);
-    printf("Reverb (on/off): %x\n", attr.cd.reverb);
-    printf("CD Mix (on/off): %x\n", attr.cd.mix);
-
-    }
-
-    void initSpu(int applyVolumeCd, int applyVolumeMaster) 
-    {
-/*
-        The volume mode is ‘direct mode’ and the range of the values which can be set to the mvolL and mvolR
-        volumes is equal to that of the ‘direct mode’ in SpuSetVoiceAttr() (-0x4000 to 0x3fff).
-*/      SpuSetCommonMasterVolume(applyVolumeMaster, applyVolumeMaster);
-
-        //Set independently for left and right in the range -0x8000 - 0x7fff. If volume is negative, the phase is inverted.
-        SpuSetCommonCDVolume(applyVolumeCd, applyVolumeCd);
-
-        // No output without CD Mixing turned on
-        SpuSetCommonCDMix(1);
-
-        printSpu();
-        
-    }
-
-    void shuffleFunction() {
-        long rootCounterValue = GetRCnt(0);  // Get the root counter value
-
-        if (rootCounterValue != -1) {
-            srand((unsigned int)rootCounterValue);  // Seed the random number generator
-        } else {
-            printf("Error: Failed to get root counter value.\n");
-            return; // Exit if seeding fails
-        }
-
-        // Start from index 1 to store track numbers
-        for (int i = 1; i <= numTracks; i++) { // Fill from index 1 to numTracks
-            int newTrack;
-            do {
-                newTrack = rand() % numTracks + 1; // Random value between 1 and numTracks
-            } while (isValueInArray(newTrack, shuffledTracks, i)); // Ensure unique values
-
-            shuffledTracks[i] = newTrack; // Store the unique value
-            printf("\nTrack Order: %d\n", shuffledTracks[i]);
-        }
-
-        shuffledTracks[0] = numTracks; // Store total track count in index 0
-        shuffledTracks[numTracks + 1] = 0; // Zero out the final array element (numTracks + 1)
-
-        // Call CdPlay with repeat or stop mode
-        if (repeat == 1) {
-            CdPlay(2, shuffledTracks, decimalValues[index]); // Play with repeat
-            printf("Shuffled tracks (repeat mode): 0x%02X\n", decimalValues[track]);
-        } else if (repeat == 0) {
-            CdPlay(1, shuffledTracks, decimalValues[index]); // Play and stop at the end
-            printf("Shuffled tracks (stop mode): 0x%02X\n", decimalValues[track]);
-        }
-    }
-
-    void playerInformationLogic(); // function dec here so we can call it as its below this function, rearrange later and remove this
-    void readControllerInput()
-    {
-    
-    int pad = 0x00;
-    u_char trackValue;
-    static int newVolumeLevelCd = MAX_VOLUME_CD;
-    static int newVolumeLevelMaster = MAX_VOLUME_MASTER;
-    trackValue = decimalValues[track]; 
-    
-    //slow down the polling
-    if (debounceTimer%7 == 0)
-    {                               
-    pad = PadRead(0); // Read pads input. id is unused, always 0.
-    }
-    debounceTimer++;
-
-        switch (pad) {
-            /////////////////////////////////////   
-            case PADLup:
-
-                if (newVolumeLevelCd < MAX_VOLUME_CD) 
-                {
-                newVolumeLevelCd+=450; //tweak the steps!
-                initSpu(newVolumeLevelCd, newVolumeLevelMaster);
-                initSpu(newVolumeLevelCd, newVolumeLevelMaster);
-                }
-                printf("\nUP D-Pad pressed, volume increased\n");
-                break;
-            /////////////////////////////////////   
-            case PADLdown:
-
-                if (newVolumeLevelCd > 0) 
-                {
-                newVolumeLevelCd-=450; //tweak the steps!
-                initSpu(newVolumeLevelCd, newVolumeLevelMaster);
-                initSpu(newVolumeLevelCd, newVolumeLevelMaster);
-                }
-                printf("\nDown D-Pad pressed, volume decreased\n");
-                break;
-            /////////////////////////////////////   
-            case PADLright: // Increment the track with wrap around to first track
-
-                // Increment track value if not at last track
-                if (trackValue < numTracks)
-                {
-                trackValue++;
-                }
-                // else if last track, go back to track 1, as long as shuffle isn't on
-                if (trackValue == numTracks && shuffle == 0)
-                {
-                trackValue = 1;
-                }
-                CdControlF (CdlPlay, (u_char *)&loc[trackValue]);
-                printf("\nTrack value: %d\n", trackValue);
-                printf("\nRight D-Pad pressed, increment track");
-                break;
-            /////////////////////////////////////   
-            case PADLleft: // Decrement the track with wrap around to final track
-
-                // if playing first track, go to final track, if shuffle is off!
-                if (trackValue == 1 && shuffle == 0)
-                {
-                trackValue = numTracks;
-                CdControlF (CdlPlay, (u_char *)&loc[trackValue]);
-                }
-                // else decrement track value
-                else if (trackValue <= numTracks && trackValue != 1 && shuffle == 0) //make sure shuffle isn't on
-                {
-                trackValue--;
-                CdControlF (CdlPlay, (u_char *)&loc[trackValue]);
-                }
-                printf("\nTrack value: %d\n", trackValue);
-                printf("\nLeft D-Pad pressed, decrement track"); 
-                break;
-            /////////////////////////////////////      
-            case PADRup:
-                if (shuffle == false)
-                {
-                    
-                for (int i = 0; i < 101; i++) { // reset shuffledTracks array or locks up after turning on/off then on again
-                shuffledTracks[i] = 0;
-                }
-
-                CdControlF (CdlStop, 0); // smoother?
-                shuffleFunction(numTracks, shuffledTracks);
-                shuffle = true;
-                }
-                else if (shuffle == true) // turn off shuffle
-                {
-                shuffle = false;
-                CdPlay(0, NULL, 0);
-                CdControlF (CdlPlay, (u_char *)&loc[trackValue]); //resume playing
-                }
-                break;
-            /////////////////////////////////////   
-            case PADRdown: // Play/Pause
-
-            static bool pause = false;
-            if (pause == false) 
-            {
-            CdControlF (CdlPause, 0);
-            pause = 1;
-            printf("\nPAUSED");
-            
-            }
-            else if (pause == true)
-            {
-            CdControlF (CdlPlay, 0);
-            pause = 0;
-            printf("\nRESUMING PLAY FROM PAUSE");
-            
-            }
-            break;
-            /////////////////////////////////////   
-            case PADRright: //Mute/ Demute
-
-            static bool mute = false;
-            if (mute == false) 
-            {
-            CdControlF (CdlMute, 0);
-            mute = 1;
-            printf("\nAudio Muted");
-            
-            }
-            else if (mute == true)
-            {
-            CdControlF (CdlDemute, 0);
-            mute = false;
-            printf("\nAudio Demuted");
-            }
-            break;
-            /////////////////////////////////////   
-            case PADRleft:
-                        //   sq btn
-                break;
-            /////////////////////////////////////   
-            case PADL1:
-            CdControlF (CdlBackward, 0);
-            printf("\nrewinding");
-            while (pad == PADL1)
-            {
-                pad = PadRead(0);        // Keep re-reading the pad to check for release of forward
-                playerInformationLogic();   //keep updating the track information
-                display();                  // keep updating the display
-            }               
-            printf("\nrewind released");
-            CdControlF (CdlPlay, 0); // Resume play, button released
-                break;
-            /////////////////////////////////////   
-            case PADL2:
-                        // L2
-                break;
-            /////////////////////////////////////   
-            case PADR1:
-            CdControlF (CdlForward, 0);
-            printf("\nfast forward");
-            while (pad == PADR1)
-            {
-                pad = PadRead(0); // Keep re-reading the pad to check for release of forward
-                playerInformationLogic(); //keep updating the track information
-                display();                // keep updating the display
-            }               
-            printf("\nfast forward released");
-            CdControlF (CdlPlay, 0); // Resume play, button released
-                break;
-            /////////////////////////////////////   
-            case PADR2:
-                        // R2
-                break;
-
-            case PADstart:
-
-                break;
-
-            case PADselect:
-
-                break;
-
-            default:
-                break;
-        }
-      }
-          
     void calculateCurrentTrackLength() {
             // Get the current track number
-            u_char currentTrack = decimalValues[track]; // holds the current track number
+            int currentTrack = decimalValues[track];
+
+            // Validate current track number
+            if (currentTrack < 1 || currentTrack > numTracks) {
+                printf("Invalid current track: %d\n", currentTrack);
+                return;
+            }
 
             // Temporary variables for BCD values and decimal conversion
             unsigned char bcdValues[2];
@@ -606,11 +606,8 @@
             // Convert to total seconds
             currentTrackTimeInSeconds = (lengthMinutes * 60) + lengthSeconds;
 
-            // Positive integer is a track number; anything else is an error.
-            if (currentTrack > numTracks && lengthMinutes < 0)
-            {
+            // Print the current track length in seconds
             printf("Track %02d Length: %02d:%02d (%d seconds)\n", currentTrack, lengthMinutes, lengthSeconds, currentTrackTimeInSeconds);
-            }
         }
         
         void getTableOfContents() { // check tools.c for gettoc in drive lid status function
@@ -711,8 +708,8 @@
         ////////////////////////////////////////////////
         //printf("\nCdlNop: %x", cdlNopStatusByte); //cdlNopStatusByte: 0
 
-        // Print the CURRENT track information if a disc is playing, otherwise zero them out
-        if (cdlNopStatusByte == CdlStatPlay + CdlStatStandby){
+        // Print the CURRENT track information if a disc is playing or in fast track forward/reverse, otherwise zero them out
+        if (cdlNopStatusByte == CdlStatPlay + CdlStatStandby || cdlNopStatusByte == 2){ // fast foward / reverse, result[0] is 2
         FntPrint("           %0d\n\n", numTracks);             // Track Count main screen 
         FntPrint("           %0d\n\n", decimalValues[track]); // Current Track main screen
         }
@@ -798,10 +795,10 @@
 
         while (1) 
         {   
+            checkDriveLidStatus(); // getToc called in here
             initFont();
             playerInformationLogic();
             readControllerInput();
-            checkDriveLidStatus(); // getToc called in here
             display();  
         }
 
