@@ -44,7 +44,7 @@ int isValueInArray(int value, int *array, int size) {
     return 0; // Value not found (false)
 }
 
-// 320x240: (0, 0) for the top-left corner,  (319, 239) for the bottom-right corner.
+// 320x240: (0, 0) for the top-left corner,  (319, 239) for the bottom-right corner. - couldn't get this working
 void drawTextAtPosition(int x, int y, const char* text) {
     FntLoad(960, 256);  // Load basic font pattern
     FntLoad(x, y);               
@@ -52,6 +52,84 @@ void drawTextAtPosition(int x, int y, const char* text) {
     // print at parameters passed to function
     FntPrint(text);
 }
+
+void selectCustomTracks() {
+    int selectedTrack = 1; // Start selection on track 1
+    int i = 1; // Index for shuffledTracks array
+    int controllerDebounce = 0; // Debounce counter
+    int button = 0; // Variable for button state
+    const int debounceDelay = 7; // Controller debounce (less = more sensitive)
+
+    shuffledTracks[0] = numTracks; // Set the first element of shuffledTracks to the number of tracks
+
+    while (i < numTracks + 1) { // Continue until all tracks are selected (1 to numTracks inclusive)
+        // Display the current selection
+        FntPrint("\n\n\n\n\n\n");
+        FntPrint("\nSelect Track %d: Track %d of %d", i, selectedTrack, numTracks);
+        display(); // Update the display
+
+        // Read the button state with debounce logic
+        if (controllerDebounce >= debounceDelay) {
+            button = PadRead(0); // Read pad input
+            controllerDebounce = 0; // Reset debounce counter
+        } else {
+            button = 0; // Reset button state if debounce delay hasn't passed
+        }
+        controllerDebounce++;
+
+        // Check for up or down input to toggle selection
+        if (button == PADLup && selectedTrack < numTracks) {
+            selectedTrack++; // Go up the track list
+        } 
+        else if (button == PADLdown && selectedTrack > 1) {
+            selectedTrack--; // Go down the track list
+        }
+        
+        // Handle selection confirmation
+        if (button == PADRdown) {
+            // Store selected track in shuffledTracks
+            shuffledTracks[i] = selectedTrack; // Store the selected track
+            display(); // Update the display
+            i++;
+        }
+        
+        // Exit selection early
+        if (button == PADRright) {
+            break; 
+        }
+    }
+}
+
+ void shuffleFunction() {
+        long rootCounterValue = GetRCnt(0);  // Get the root counter value
+
+        if (rootCounterValue != -1) {
+            srand((unsigned int)rootCounterValue);  // Seed the random number generator
+        } else {
+            printf("Error: Failed to get root counter value.\n");
+            return; // Exit if seeding fails
+        }
+
+        // Start from index 1 to store track numbers
+        for (int i = 1; i <= numTracks; i++) { // Fill from index 1 to numTracks
+            int newTrack;
+            do {
+                newTrack = rand() % numTracks + 1; // Random value between 1 and numTracks
+            } while (isValueInArray(newTrack, shuffledTracks, i)); // Ensure unique values
+
+            shuffledTracks[i] = newTrack; // Store the unique value
+            printf("Track %d: %d\n", i, shuffledTracks[i]);
+        }
+
+        shuffledTracks[0] = numTracks; // Set the first element of shuffledTracks to the number of tracks
+
+        // Call CdPlay with repeat or stop mode
+        if (repeat == 1) {
+            CdPlay(2, shuffledTracks, decimalValues[index]); // Play with repeat
+        } else if (repeat == 0) {
+            CdPlay(1, shuffledTracks, decimalValues[index]); // Play and stop at the end
+        }
+    }
 
 int shuffleModeSelection(int button) {
     static const char* shuffleModes[] = {"RANDOM", "CUSTOM"};

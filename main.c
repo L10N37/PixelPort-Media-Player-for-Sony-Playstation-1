@@ -66,7 +66,7 @@
     int decimalValues[8] = {0x00};       // to hold decimal values from GETLOCP after conversion from BCD (uchar?)
     int numTracks = 0x00;                // for storing number of audio tracks found on CD
     int debounceTimer= 0;                // controller input debounce timer
-    int shuffledTracks[101];             // Max tracks 100, for shuffle/ built in CdPlay function we need an extra element to contain zero (could have implemented shuffle manually though)
+    int shuffledTracks[101] = {0x00};    // Max tracks 100, for shuffle/ built in CdPlay function we need an extra element to contain zero (could have implemented shuffle manually though)
 
     bool repeat = true;                  // repeat mode flag (repeat the CD when finished), on by default
     bool shuffle = false;                // shuffle mode flag
@@ -78,40 +78,6 @@
                 int seconds;
     } TrackTime;
 
-    void shuffleFunction() {
-        long rootCounterValue = GetRCnt(0);  // Get the root counter value
-
-        if (rootCounterValue != -1) {
-            srand((unsigned int)rootCounterValue);  // Seed the random number generator
-        } else {
-            printf("Error: Failed to get root counter value.\n");
-            return; // Exit if seeding fails
-        }
-
-        // Start from index 1 to store track numbers
-        for (int i = 1; i <= numTracks; i++) { // Fill from index 1 to numTracks
-            int newTrack;
-            do {
-                newTrack = rand() % numTracks + 1; // Random value between 1 and numTracks
-            } while (isValueInArray(newTrack, shuffledTracks, i)); // Ensure unique values
-
-            shuffledTracks[i] = newTrack; // Store the unique value
-            printf("\nTrack Order: %d\n", shuffledTracks[i]);
-        }
-
-        shuffledTracks[0] = numTracks; // Store total track count in index 0
-        shuffledTracks[numTracks + 1] = 0; // Zero out the final array element (numTracks + 1)
-
-        // Call CdPlay with repeat or stop mode
-        if (repeat == 1) {
-            CdPlay(2, shuffledTracks, decimalValues[index]); // Play with repeat
-            printf("Shuffled tracks (repeat mode): 0x%02X\n", decimalValues[track]);
-        } else if (repeat == 0) {
-            CdPlay(1, shuffledTracks, decimalValues[index]); // Play and stop at the end
-            printf("Shuffled tracks (stop mode): 0x%02X\n", decimalValues[track]);
-        }
-    }
-    
     void initSpu(int applyVolumeCd, int applyVolumeMaster) 
     {
 /*
@@ -178,7 +144,7 @@
             case PADLright: // Increment the track with wrap around to first track
 
                 // Increment track value if not at last track
-                if (trackValue < numTracks)
+                if (trackValue < numTracks) // shuffle can land on us last track with more to play in shuffledTracks array, but || with shuffle flag still trips out the player and resets it to track 1
                 {
                 trackValue++;
                 }
@@ -212,7 +178,7 @@
             /////////////////////////////////////      
             case PADRup:
 
-            printf("\nShuffle button pressed (triangle)");
+            printf("\nShuffle button pressed (triangle)\n");
 
             if (!shuffle) // shuffle is off, turn it on with chosen mode selection
             { 
@@ -225,6 +191,32 @@
                 shuffle = true; // Set shuffle mode to true
                 printf("\nShuffle Mode: %d\n", selectedShuffleMode);
                 printf("\nShuffle Flag: %d\n", shuffle);
+                printf("\nChosen Tracks:\n");
+                for (int i = 0; i <= numTracks+1; i++) {
+                    printf("Track %d: %d\n", i, shuffledTracks[i]);
+                }
+                 return; // break out of the function so we don't turn off shuffle mode below 
+                }
+                
+                else if (selectedShuffleMode) // shuffle mode chosen : CUSTOM
+                {
+                selectCustomTracks();
+                // Call CdPlay with repeat or stop mode
+                CdControlF(CdlStop, 0); // smoother?
+                if (repeat == 1) {
+                CdPlay(2, shuffledTracks, decimalValues[index]); // Play with repeat
+                } else if (repeat == 0) {
+                CdPlay(1, shuffledTracks, decimalValues[index]); // Play and stop at the end
+                }
+
+                shuffle = true; // Set shuffle mode to true
+                printf("\nShuffle Mode: %d\n", selectedShuffleMode);
+                printf("\nShuffle Flag: %d\n", shuffle);
+
+                printf("\nChosen Tracks:\n");
+                for (int i = 0; i <= numTracks+1; i++) {
+                    printf("Track %d: %d\n", i, shuffledTracks[i]);
+                }
                 return; // break out of the function so we don't turn off shuffle mode below 
                 }
             }
@@ -508,7 +500,6 @@
       // wait for all drawing to finish
       DrawSync(0);
     }
-
 
     void display()
     {
@@ -825,7 +816,9 @@
 
 
 /*
-add manual shuffle selection to choose custom track order (as opposed to randomly generated)
+fix shuffle bug where landing on final track in shuffledTrack array mid CD won't allow a manual (Right Dpad) track increment to next track/ array element of shuffledTrack
+Unsure why it even increments correctly through the array up until that track comes up, it might be a bug in the SDK
+
 add reverb on / off
 add L/R balance
 add volume level displays

@@ -22,8 +22,11 @@ void display();
 void initFont();
 void drawTextAtPosition(int x, int y, const char* text);
 int shuffleModeSelection(int button);
+void shuffleFunction();
+void selectCustomTracks();
 
 // shared variables
+extern int trackCount;
 extern bool shuffle;
 extern CdlLOC loc[100];
 extern u_char result[8];  
@@ -33,6 +36,7 @@ extern int numTracks;
 extern int shuffledTracks[101];
 extern int decimalValues[8];
 extern u_char result[8];
+extern bool repeat;
 
 // for readability when accessing decimalValues variable
 typedef enum {
