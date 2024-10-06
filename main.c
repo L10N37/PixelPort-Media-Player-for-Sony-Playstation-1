@@ -27,14 +27,14 @@
     Schnappy 07-2021
 
     Added Media Player functionality - vajskids 2024
-    randomising code stayed, but not used yet
-    mostly rewritten
     */
 
     #include "common.h"
     // TIM image
     #include "background.h"
-#include "tools.h"
+    #include "libetc.h"
+    #include "libgpu.h"
+    #include "tools.h"
 
     #define OT_LENGTH 1                             // ordering table length
     #define PACKETMAX (300)                         // the max num of objects
@@ -70,6 +70,7 @@
 
     bool repeat = true;                  // repeat mode flag (repeat the CD when finished), on by default
     bool shuffle = false;                // shuffle mode flag
+    bool selectedShuffleMode = 0;        // shuffle mode flag, 0 for random, 1 for custom
     
     typedef struct 
     {
@@ -210,24 +211,38 @@
                 break;
             /////////////////////////////////////      
             case PADRup:
-                if (shuffle == false)
+
+            printf("\nShuffle button pressed (triangle)");
+
+            if (!shuffle) // shuffle is off, turn it on with chosen mode selection
+            { 
+               selectedShuffleMode = shuffleModeSelection(pad); // grab chosen mode
+
+                if (!selectedShuffleMode) // shuffle mode chosen: RANDOM
+                { 
+                CdControlF(CdlStop, 0); // smoother?
+                shuffleFunction(); // Shuffle the tracks
+                shuffle = true; // Set shuffle mode to true
+                printf("\nShuffle Mode: %d\n", selectedShuffleMode);
+                printf("\nShuffle Flag: %d\n", shuffle);
+                return; // break out of the function so we don't turn off shuffle mode below 
+                }
+            }
+
+            if (shuffle) // if shuffle is on, turn it off and reset the shuffledTracks array
+            {
+                // Reset shuffledTracks array
+                for (int i = 0; i < 101; i++) 
                 {
-                    
-                for (int i = 0; i < 101; i++) { // reset shuffledTracks array or locks up after turning on/off then on again
-                shuffledTracks[i] = 0;
+                    shuffledTracks[i] = 0;
                 }
 
-                CdControlF (CdlStop, 0); // smoother?
-                shuffleFunction(numTracks, shuffledTracks);
-                shuffle = true;
-                }
-                else if (shuffle == true) // turn off shuffle
-                {
-                shuffle = false;
-                CdPlay(0, NULL, 0);
-                CdControlF (CdlPlay, (u_char *)&loc[trackValue]); //resume playing
-                }
-                break;
+                CdPlay(0, NULL, 0); // turn off built in array player
+                CdControlF(CdlPlay, (u_char *)&loc[trackValue]); // Resume playing from the current track
+                shuffle = false; // toggle shuffle mode flag
+            }
+
+            break;
             /////////////////////////////////////   
             case PADRdown: // Play/Pause
 
@@ -718,10 +733,12 @@
         FntPrint("           %0d\n\n", 0); 
         }
 
+        // Print shuffle status
         if (shuffle == 0) {
-            FntPrint("           OFF\n\n"); // Shuffle on or off? main screen
+            FntPrint("           OFF\n\n"); // Shuffle is off
         } else {
-            FntPrint("           ON\n\n");
+            // Print ON and the selected shuffle mode
+            FntPrint("           ON: %s\n\n", selectedShuffleMode == 0 ? "RANDOM" : "CUSTOM");
         }
 
         FntPrint("           %02d:%02d\n", decimalValues[min], decimalValues[sec]); // time played, main screen
@@ -797,8 +814,8 @@
         {   
             checkDriveLidStatus(); // getToc called in here
             initFont();
-            playerInformationLogic();
             readControllerInput();
+            playerInformationLogic();
             display();  
         }
 

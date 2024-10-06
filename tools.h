@@ -21,6 +21,7 @@ void playerInformationLogic();
 void display();
 void initFont();
 void drawTextAtPosition(int x, int y, const char* text);
+int shuffleModeSelection(int button);
 
 // shared variables
 extern bool shuffle;

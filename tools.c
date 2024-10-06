@@ -53,6 +53,37 @@ void drawTextAtPosition(int x, int y, const char* text) {
     FntPrint(text);
 }
 
+int shuffleModeSelection(int button) {
+    static const char* shuffleModes[] = {"RANDOM", "CUSTOM"};
+    bool selection = 0; // 0 for RANDOM, 1 for CUSTOM, random default
+
+    // Display the initial selection
+    FntPrint("\n\n\n\n\n\n");
+    FntPrint("\nShuffle mode selection: <- %s ->", shuffleModes[selection]);
+    display(); // Update the display
+
+    while (1) {
+        button = PadRead(0); // Read pad input
+
+        // Check for left or right input to toggle selection
+        if (button == PADLleft) {
+            selection = 0; // RANDOM
+            FntPrint("\n\n\n\n\n\n");
+            FntPrint("\nShuffle mode selection: <- %s ->", shuffleModes[selection]);
+            display(); // Update the display
+        } else if (button == PADLright) {
+            selection = 1; // CUSTOM
+            FntPrint("\n\n\n\n\n\n");
+            FntPrint("\nShuffle mode selection: <- %s ->", shuffleModes[selection]);
+            display(); // Update the display
+        }
+        if (button == PADRdown) {
+            // If 'X' is selected, return the current selection
+            return selection; // 0 for RANDOM, 1 for CUSTOM
+        }
+    }
+}
+
 void checkDriveLidStatus(){
 
     #define subsequentLidClose 0
