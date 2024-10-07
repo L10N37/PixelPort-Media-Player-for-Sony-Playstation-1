@@ -32,6 +32,7 @@
     #include "common.h"
     // TIM image
     #include "background.h"
+    #include "libgpu.h"
 
     #define OT_LENGTH 1                             // ordering table length
     #define PACKETMAX (300)                         // the max num of objects
@@ -65,17 +66,21 @@
     int debounceTimer= 0;                // controller input debounce timer
     int shuffledTracks[101] = {0x00};    // Max tracks 100, for shuffle/ built in CdPlay function we need an extra element to contain zero (could have implemented shuffle manually though)
 
-    bool repeat = true;                  // repeat mode flag (repeat the CD when finished), on by default
-    bool shuffle = false;                // shuffle mode flag
-    bool selectedShuffleMode = 0;        // shuffle mode flag, 0 for random, 1 for custom
-    bool shuffleSelectionBreakEarly = false;
-    bool reverb = false;
-    
     typedef struct 
     {
                 int mins;
                 int seconds;
     } TrackTime;
+
+
+   statusFlags flag = {
+        .repeat = true,                         // Repeat mode enabled
+        .shuffle = false,                       // Shuffle mode disabled
+        .selectedShuffleMode = false,           // shuffle mode flag, 0 for random, 1 for custom
+        .shuffleSelectionBreakEarly = false,    // No early break in shuffle selection
+        .reverb = false,                        // Reverb effect enabled
+        .mute = false                           // Mute off
+    };
 
     void initSpu(int applyVolumeCd, int applyVolumeMaster) 
     {
@@ -147,7 +152,7 @@
                 trackValue++;
                 }
                 // else if last track, go back to track 1, as long as shuffle isn't on
-                if (trackValue == numTracks && shuffle == 0)
+                if (trackValue == numTracks && flag.shuffle == 0)
                 {
                 trackValue = 1;
                 }
@@ -159,13 +164,13 @@
             case PADLleft: // Decrement the track with wrap around to final track
 
                 // if playing first track, go to final track, if shuffle is off!
-                if (trackValue == 1 && shuffle == 0)
+                if (trackValue == 1 && flag.shuffle == 0)
                 {
                 trackValue = numTracks;
                 CdControlF (CdlPlay, (u_char *)&loc[trackValue]);
                 }
                 // else decrement track value
-                else if (trackValue <= numTracks && trackValue != 1 && shuffle == 0) //make sure shuffle isn't on
+                else if (trackValue <= numTracks && trackValue != 1 && flag.shuffle == 0) //make sure shuffle isn't on
                 {
                 trackValue--;
                 CdControlF (CdlPlay, (u_char *)&loc[trackValue]);
@@ -176,20 +181,20 @@
             /////////////////////////////////////      
             case PADRup:
 
-            shuffleSelectionBreakEarly = false;
+            flag.shuffleSelectionBreakEarly = false;
             printf("\nShuffle button pressed (triangle)\n");
 
-            if (!shuffle) // shuffle is off, turn it on with chosen mode selection
+            if (!flag.shuffle) // shuffle is off, turn it on with chosen mode selection
             { 
-               selectedShuffleMode = shuffleModeSelection(pad); // grab chosen mode
+               flag.selectedShuffleMode = shuffleModeSelection(pad); // grab chosen mode
 
-                if (!selectedShuffleMode && !shuffleSelectionBreakEarly) // shuffle mode chosen: RANDOM
+                if (!flag.selectedShuffleMode && !flag.shuffleSelectionBreakEarly) // shuffle mode chosen: RANDOM
                 { 
                 CdControlF(CdlStop, 0); // smoother?
                 shuffleFunction(); // Shuffle the tracks
-                shuffle = true; // Set shuffle mode to true
-                printf("\nShuffle Mode: %d\n", selectedShuffleMode);
-                printf("\nShuffle Flag: %d\n", shuffle);
+                flag.shuffle = true; // Set shuffle mode to true
+                printf("\nShuffle Mode: %d\n", flag.selectedShuffleMode);
+                printf("\nShuffle Flag: %d\n", flag.shuffle);
                 printf("\nChosen Tracks:\n");
                 for (int i = 0; i <= numTracks+1; i++) {
                     printf("Track %d: %d\n", i, shuffledTracks[i]);
@@ -197,20 +202,20 @@
                  return; // break out of the function so we don't turn off shuffle mode below 
                 }
                 
-                if (selectedShuffleMode && !shuffleSelectionBreakEarly) // shuffle mode chosen : CUSTOM
+                if (flag.selectedShuffleMode && !flag.shuffleSelectionBreakEarly) // shuffle mode chosen : CUSTOM
                 {
                 selectCustomTracks();
                 // Call CdPlay with repeat or stop mode
                 CdControlF(CdlStop, 0); // smoother?
-                if (repeat == 1) {
+                if (flag.repeat == 1) {
                 CdPlay(2, shuffledTracks, decimalValues[index]); // Play with repeat
-                } else if (repeat == 0) {
+                } else if (flag.repeat == 0) {
                 CdPlay(1, shuffledTracks, decimalValues[index]); // Play and stop at the end
                 }
 
-                shuffle = true; // Set shuffle mode to true
-                printf("\nShuffle Mode: %d\n", selectedShuffleMode);
-                printf("\nShuffle Flag: %d\n", shuffle);
+                flag.shuffle = true; // Set shuffle mode to true
+                printf("\nShuffle Mode: %d\n", flag.selectedShuffleMode);
+                printf("\nShuffle Flag: %d\n", flag.shuffle);
 
                 printf("\nChosen Tracks:\n");
                 for (int i = 0; i <= numTracks+1; i++) {
@@ -220,7 +225,7 @@
                 }   
             }
 
-            if (shuffle || !shuffleSelectionBreakEarly) // if shuffle is on or exit before selecting mode/ tracks, turn it off and reset the shuffledTracks array
+            if (flag.shuffle || !flag.shuffleSelectionBreakEarly) // if shuffle is on or exit before selecting mode/ tracks, turn it off and reset the shuffledTracks array
             {
                 // Reset shuffledTracks array
                 for (int i = 0; i < 101; i++) 
@@ -230,7 +235,7 @@
 
                 CdPlay(0, NULL, 0); // turn off built in array player
                 CdControlF(CdlPlay, (u_char *)&loc[trackValue]); // Resume playing from the current track
-                shuffle = false; // toggle shuffle mode flag
+                flag.shuffle = false; // toggle shuffle mode flag
             }
 
             break;
@@ -255,19 +260,17 @@
             break;
             /////////////////////////////////////   
             case PADRright: //Mute/ Demute
-
-            static bool mute = false;
-            if (mute == false) 
+            if (flag.mute == false) 
             {
             CdControlF (CdlMute, 0);
-            mute = 1;
+            flag.mute = true;
             printf("\nAudio Muted");
             
             }
-            else if (mute == true)
+            else if (flag.mute == true)
             {
             CdControlF (CdlDemute, 0);
-            mute = false;
+            flag.mute = false;
             printf("\nAudio Demuted");
             }
             break;
@@ -293,12 +296,12 @@
                 printf("\nL2 Pressed");
                  // p1060 LibRef47.pdf
             printf("\nL2 Pressed");
-            if (reverb) {
+            if (flag.reverb) {
                 SpuSetCommonCDReverb(0);
             } else {
                 SpuSetCommonCDReverb(1);
             }
-            reverb = !reverb; // Toggle the reverb state
+            flag.reverb = !flag.reverb; // Toggle the reverb state
             break;
             /////////////////////////////////////   
             case PADR1:
@@ -730,23 +733,44 @@
         }
 
         // Print shuffle status
-        if (!shuffle) {
+        if (!flag.shuffle) {
             FntPrint("    Shuffle: OFF\n\n"); // Shuffle is off
-        } else if (shuffle) {
+        } else if (flag.shuffle) {
             // Print ON and the selected shuffle mode
-            FntPrint("    Shuffle: ON- %s\n\n", selectedShuffleMode == 0 ? "RANDOM" : "CUSTOM");
+            FntPrint("    Shuffle: ON- %s\n\n", flag.selectedShuffleMode == 0 ? "RANDOM" : "CUSTOM");
         }
 
         // Print reverb status
-        if (!reverb) {
+        if (!flag.reverb) {
             FntPrint("    Reverb: OFF\n\n"); // Reverb is off
-        } else if (reverb) {
+        } else if (flag.reverb) {
             // Print ON
             FntPrint("    Reverb: ON\n\n");
         }
         
+        // Print volume levels after conversion to a percentage value
+        SpuCommonAttr attr;
+        SpuGetCommonAttr(&attr);
+
+        int leftVolume = attr.cd.volume.left;
+        int rightVolume = attr.cd.volume.right;
+
+        int leftPercentage = convertToPercentage(leftVolume);
+        int rightPercentage = convertToPercentage(rightVolume);
+
+        FntPrint("    CD Volume Left: %d%%\n", leftPercentage);
+        FntPrint("    CD Volume Right: %d%%\n", rightPercentage);
+
+        // Print mute status
+        if (!flag.mute) {
+            FntPrint("    Mute: OFF\n\n");
+        } else if (flag.mute) {
+            // Print ON
+            FntPrint("    Mute: ON\n\n");
+        }
+
         // progress bar spacing
-        FntPrint("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
+        FntPrint("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
         
         // Calculate progress
         int totalSeconds = currentTrackTimeInSeconds; // Total track length in seconds
@@ -765,7 +789,7 @@
         }
         FntPrint("\n");
         
-        // Has the track changed? grab new tracks value in seconds if so
+        // Has the track changed? grab new tracks value in seconds if so - might cause loss of progress bar if shuffle sets first track to one already playing, fix
         static bool hasTrackChanged = false;
         static u_char oldTrack = 0;
 
@@ -829,9 +853,6 @@
 /*
 fix shuffle bug where landing on final track in shuffledTrack array mid CD won't allow a manual (Right Dpad) track increment to next track/ array element of shuffledTrack
 Unsure why it even increments correctly through the array up until that track comes up, it might be a bug in the SDK
-
 add L/R balance
-add volume level displays
 add repeat on/off
-accompanying background display editing (including shoulder buttons)
 */

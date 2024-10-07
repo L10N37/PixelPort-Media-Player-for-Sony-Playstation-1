@@ -24,20 +24,19 @@ void drawTextAtPosition(int x, int y, const char* text);
 int shuffleModeSelection(int button);
 void shuffleFunction();
 void selectCustomTracks();
+int convertToPercentage(int volume);
 
 // shared variables
-extern int trackCount;
-extern bool shuffle;
+extern u_char result[8];
+extern u_char result[8];
 extern CdlLOC loc[100];
-extern u_char result[8];  
 extern CVECTOR fntColor;    // Foreground color
 extern CVECTOR fntColorBG;  // Background color
+
+extern int trackCount;
 extern int numTracks;
 extern int shuffledTracks[101];
 extern int decimalValues[8];
-extern u_char result[8];
-extern bool repeat;
-extern bool shuffleSelectionBreakEarly;
 
 // for readability when accessing decimalValues variable
 typedef enum {
@@ -50,5 +49,16 @@ typedef enum {
     asec,
     aframe
 } TrackInfoIndex;
+
+typedef struct {
+    bool repeat;                    
+    bool shuffle;                   
+    bool selectedShuffleMode;
+    bool shuffleSelectionBreakEarly;
+    bool reverb;
+    bool mute;
+} statusFlags;
+
+extern statusFlags flag;
 
 #endif

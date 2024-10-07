@@ -77,9 +77,9 @@ void drawTextAtPosition(int x, int y, const char* text) {
         shuffledTracks[0] = numTracks; // Set the first element of shuffledTracks to the number of tracks
 
         // Call CdPlay with repeat or stop mode
-        if (repeat == 1) {
+        if (flag.repeat == 1) {
             CdPlay(2, shuffledTracks, decimalValues[index]); // Play with repeat
-        } else if (repeat == 0) {
+        } else if (flag.repeat == 0) {
             CdPlay(1, shuffledTracks, decimalValues[index]); // Play and stop at the end
         }
     }
@@ -126,7 +126,7 @@ void selectCustomTracks() {
         
         // Exit selection early
         if (button == PADRright) {
-            shuffleSelectionBreakEarly= true;
+            flag.shuffleSelectionBreakEarly= true;
             return;
         }
     }
@@ -162,11 +162,19 @@ int shuffleModeSelection(int button) {
         }
         // Exit selection early
         else if (button == PADRright) {
-            shuffleSelectionBreakEarly= true;
+            flag.shuffleSelectionBreakEarly= true;
             return 0;
             }
         }
     }
+
+int convertToPercentage(int volume) {
+    if (volume <= 0) {
+        return 0; // Return 0% if volume is less than or equal to 0
+    }
+    // Calculate percentage; scale up to avoid float division
+    return (volume >= 32767) ? 100 : (volume * 100) / 32767;
+}
 
 void checkDriveLidStatus(){
 
@@ -177,9 +185,9 @@ void checkDriveLidStatus(){
     ////////////////////////////////////////////////
     //printf("\nCheck of result[0] (CdlNop): %x", cdlNopStatusByte);
 
-        if (shuffle && cdlNopStatusByte == CdlStatShellOpen) // if shuffle was on when you opened the drive lid
+        if (flag.shuffle && cdlNopStatusByte == CdlStatShellOpen) // if shuffle was on when you opened the drive lid
         {                                          
-            shuffle = false;                       // toggle the shuffle flag to false in case shuffle was on at disc swap
+            flag.shuffle = false;                       // toggle the shuffle flag to false in case shuffle was on at disc swap
             CdPlay(0, NULL, 0);// cancel shuffle mode
             for (int i = 0; i < 101; i++)         // reset shuffledTracks array elements to 0
             {        
@@ -188,7 +196,7 @@ void checkDriveLidStatus(){
         }
 
     //  cdlNopStatusByte returns 0x02 (CdlStatStandby) if lid is closed at boot, 0x00 if closed after boot
-    if  (cdlNopStatusByte == CdlStatStandby && !shuffle || cdlNopStatusByte == subsequentLidClose && !shuffle || cdlNopStatusByte == CdlStatShellOpen)
+    if  (cdlNopStatusByte == CdlStatStandby && !flag.shuffle || cdlNopStatusByte == subsequentLidClose && !flag.shuffle || cdlNopStatusByte == CdlStatShellOpen)
 
     {   
         numTracks = 0; // init numTracks to 0;
