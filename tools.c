@@ -96,7 +96,7 @@ void selectCustomTracks() {
     while (i < numTracks + 1) { // Continue until all tracks are selected (1 to numTracks inclusive)
         // Display the current selection
         FntPrint("\n\n\n\n\n\n");
-        FntPrint("\n    Select Track %d: Track %d of %d", i, selectedTrack, numTracks);
+        FntPrint("\n    Select Track %d: %d of %d", i, selectedTrack, numTracks);
         display(); // Update the display
 
         // Read the button state with debounce logic
