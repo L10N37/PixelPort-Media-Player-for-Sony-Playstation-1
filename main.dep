@@ -16,4 +16,4 @@ main.o: main.c common.h third_party/psyq-iwyu/include/libgte.h \
  third_party/psyq-iwyu/include/r3000.h \
  third_party/psyq-iwyu/include/asm.h tools.h \
  c:\psyq_sdk\mips\lib\gcc\mipsel-none-elf\11.2.0\include\stdbool.h \
- background.h
+ background.h startBtnMenu.h

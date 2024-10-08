@@ -30,8 +30,14 @@
     */
 
     #include "common.h"
-    // TIM image
+
+    // TIM images
     #include "background.h"
+    #include "startBtnMenu.h"
+
+
+    #include "libcd.h"
+    #include "libetc.h"
     #include "libgpu.h"
 
     #define OT_LENGTH 1                             // ordering table length
@@ -48,7 +54,8 @@
     unsigned long __ramsize =   0x00200000;          // force 2 megabytes of RAM
     unsigned long __stacksize = 0x00004000;          // force 16 kilobytes of stack
 
-    unsigned char image[];       // bg image array converted from TIM file
+    unsigned char background[];         // bg image array converted from TIM file
+    unsigned char startBtnMenu[];
 
     // Globals -----
     CdlLOC loc[100];                    // Array to store locations of tracks
@@ -56,7 +63,7 @@
     u_char cdInfoGetlocp[8];
     u_char result[8];                    // general response storage
 
-    long int image1_addr;				// DRAM address storage of TIM file
+    //long int image1_addr;				// DRAM address storage of TIM file
 
     unsigned int currentTrackTimeInSeconds = 0;  // to hold current track time in seconds
 
@@ -81,6 +88,10 @@
         .reverb = false,                        // Reverb effect enabled
         .mute = false                           // Mute off
     };
+
+    // function dec
+    void clearVRAM();
+    void initImage(unsigned char *loadTimArray);
 
     void initSpu(int applyVolumeCd, int applyVolumeMaster) 
     {
@@ -114,7 +125,7 @@
     trackValue = decimalValues[track]; 
     
     //slow down the polling
-    if (debounceTimer%7 == 0)
+    if (debounceTimer%10 == 0)
     {                               
     pad = PadRead(0); // Read pads input. id is unused, always 0.
     }
@@ -124,24 +135,12 @@
             /////////////////////////////////////   
             case PADLup:
 
-                if (newVolumeLevelCd < MAX_VOLUME_CD) 
-                {
-                newVolumeLevelCd+=450; //tweak the steps!
-                initSpu(newVolumeLevelCd, newVolumeLevelMaster);
-                initSpu(newVolumeLevelCd, newVolumeLevelMaster);
-                }
-                printf("\nUP D-Pad pressed, volume increased\n");
+                
                 break;
             /////////////////////////////////////   
             case PADLdown:
 
-                if (newVolumeLevelCd > 0) 
-                {
-                newVolumeLevelCd-=450; //tweak the steps!
-                initSpu(newVolumeLevelCd, newVolumeLevelMaster);
-                initSpu(newVolumeLevelCd, newVolumeLevelMaster);
-                }
-                printf("\nDown D-Pad pressed, volume decreased\n");
+               
                 break;
             /////////////////////////////////////   
             case PADLright: // Increment the track with wrap around to first track
@@ -276,7 +275,7 @@
             break;
             /////////////////////////////////////   
             case PADRleft:
-                        //   sq btn
+            CdControlF(CdlStop, 0); // Stop the CD (FIX THIS, will stop and play again)
                 break;
             /////////////////////////////////////   
             case PADL1:
@@ -290,18 +289,18 @@
             }               
             printf("\nrewind released");
             CdControlF (CdlPlay, 0); // Resume play, button released
-                break;
+            break;
             /////////////////////////////////////   
             case PADL2: // L2
+             if (newVolumeLevelCd > 0) 
+                {
+                newVolumeLevelCd-=450; //tweak the steps!
+                initSpu(newVolumeLevelCd, newVolumeLevelMaster);
+                initSpu(newVolumeLevelCd, newVolumeLevelMaster);
+                }
+                printf("\nDown D-Pad pressed, volume decreased\n");
                 printf("\nL2 Pressed");
-                 // p1060 LibRef47.pdf
-            printf("\nL2 Pressed");
-            if (flag.reverb) {
-                SpuSetCommonCDReverb(0);
-            } else {
-                SpuSetCommonCDReverb(1);
-            }
-            flag.reverb = !flag.reverb; // Toggle the reverb state
+        
             break;
             /////////////////////////////////////   
             case PADR1:
@@ -317,18 +316,49 @@
             CdControlF (CdlPlay, 0); // Resume play, button released
                 break;
             /////////////////////////////////////   
-            case PADR2:
-                        // R2
+            case PADR2: // R2
+                if (newVolumeLevelCd < MAX_VOLUME_CD) 
+                {
+                newVolumeLevelCd+=450; //tweak the steps!
+                initSpu(newVolumeLevelCd, newVolumeLevelMaster);
+                initSpu(newVolumeLevelCd, newVolumeLevelMaster);
+                }
+                printf("\nUP D-Pad pressed, volume increased\n");      
                 break;
-
+            /////////////////////////////////////   
             case PADstart:
-
-                break;
-
+            clearVRAM();
+            initImage(startBtnMenu);
+            pad = 0x00; // This doesn't work for some reason, using a new variable here for padRead doesn't either, used circle as exit and not start again
+            while (1)
+            {
+                display(); // call display repeatedly, calling once prior to this loop must now allow enough time to load up and you get a blank screen
+                if (debounceTimer % 10 == 0)
+                {
+                    pad = 0x00;
+                    pad = PadRead(0);
+                    if (pad == PADRright)
+                    {
+                        break;
+                    }
+                }
+            debounceTimer++;
+            }
+            clearVRAM();
+            initImage(background);
+            break;
+            /////////////////////////////////////   
             case PADselect:
-
+            // p1060 LibRef47.pdf
+            printf("\nSelect Pressed");
+            if (flag.reverb) {
+                SpuSetCommonCDReverb(0);
+            } else {
+                SpuSetCommonCDReverb(1);
+            }
+            flag.reverb = !flag.reverb; // Toggle the reverb state       
                 break;
-
+            /////////////////////////////////////   
             default:
                 break;
         }
@@ -431,19 +461,19 @@
       GsClearOt(0,0,&WorldOrderingTable[0]);
       GsClearOt(0,0,&WorldOrderingTable[1]);
 
-      printf("Graphics Initilised!\n");
+      printf("Graphics Initialised!\n");
     }
 
     // load tim image from ram into frame buffer slot
     // we use 2 arrays [0] and [1] to split the 320px image into a section of 256px and 64px because the PSX can not draw greater than 256px (load 'image.tim' into TimTool to see). this gives us a total image size of 320px.
-    void initImage()
+    void initImage(unsigned char *loadTimArray)
     {
       RECT            rect;                                    // RECT structure
       GsIMAGE         tim_data;                                // holds tim graphic info
         
       // put data from tim file into rect         
       //GsGetTimInfo ((u_long *)(image1_addr+4),&tim_data);
-      GsGetTimInfo ((u_long *)(image+4),&tim_data);
+      GsGetTimInfo ((u_long *)(loadTimArray+4),&tim_data); // +4, skip first few bytes and start at beginning of pixel data?
 
       // load the image into the frame buffer
       rect.x = tim_data.px;                                    // tim start X coord
@@ -505,7 +535,7 @@
       image1[1].my = 0;                                        // rotation y coord
       image1[1].scalex = ONE;                                  // scale x coord (ONE = 100%)
       image1[1].scaley = ONE;                                  // scale y coord (ONE = 100%)
-      image1[1].rotate = 0;                                    // degrees to rotate   
+      image1[1].rotate = 0;                                    // degrees to rotate
 
       // wait for all drawing to finish
       DrawSync(0);
@@ -770,7 +800,7 @@
         }
 
         // progress bar spacing
-        FntPrint("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
+        FntPrint("\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
         
         // Calculate progress
         int totalSeconds = currentTrackTimeInSeconds; // Total track length in seconds
@@ -833,7 +863,7 @@
       ResetCallback(); // initialises all system callbacks
       initGraphics(); // this will initialise the graphics
       initFont(); // initialise the psy-q debugging font
-      initImage(); // initialise the TIM image
+      initImage(background); // initialise the TIM image
       PadInit(0); // Initialize pad.  Mode is always 0
 
         while (1) 
@@ -842,7 +872,7 @@
             initFont();
             readControllerInput();
             playerInformationLogic();
-            display();  
+            display();
         }
 
         ResetGraph(3); // set the video mode back
