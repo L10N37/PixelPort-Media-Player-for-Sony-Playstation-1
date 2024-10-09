@@ -1,5 +1,6 @@
 #include "tools.h"
 #include "libcd.h"
+#include "libetc.h"
 #include "libgpu.h"
 
 // Global instances for font colors
@@ -83,6 +84,80 @@ void drawTextAtPosition(int x, int y, const char* text) {
             CdPlay(1, shuffledTracks, decimalValues[index]); // Play and stop at the end
         }
     }
+
+void balanceControl() {
+    
+    #define MAX_VOLUME_CD 32767  // Maximum volume for an audio CD (0x7FFF)
+    int controllerDebounce = 0; // Debounce counter
+    int button = 0; // for button states
+    const int debounceDelay = 7; // Debounce sensitivity
+    
+    int newVolumeLevelCd = MAX_VOLUME_CD; // Initial volume
+    int balanceLength = 20; // Length of the balance display
+    int centre = balanceLength / 2; // Centre position
+    int balancePosition = centre; // Initial balance position
+
+    // reset volumes to max 
+    initSpu(newVolumeLevelCd, newVolumeLevelCd);
+
+    while (1) {
+
+        FntPrint("        ");
+        // Display balance bar
+        for (int i = 0; i < balanceLength; i++) {
+            if (i == balancePosition) {
+                FntPrint("**"); // Indicator for current balance position
+            } else {
+                FntPrint("-"); // Display balance bar
+            }
+        }
+        FntPrint("\n\n");
+        FntPrint("    Audio Balance");
+
+        display();
+
+        if (controllerDebounce >= debounceDelay) {
+            button = PadRead(0);
+            controllerDebounce = 0;
+        } else {
+            button = 0;
+        }
+        controllerDebounce++;
+
+        if (button == PADL2 && balancePosition > 0) {
+            balancePosition--; // Shift balance left
+        } 
+        else if (button == PADR2 && balancePosition < balanceLength - 1) {
+            balancePosition++; // Shift balance right
+        }
+
+        // Calculate left and right volumes based on balance position
+        int leftVolume, rightVolume;
+
+        // If centred, set both volumes to 50% of max
+        if (balancePosition == centre) {
+            leftVolume = newVolumeLevelCd / 2; // 50% of max volume
+            rightVolume = newVolumeLevelCd / 2; // 50% of max volume
+        } else {
+            leftVolume = (newVolumeLevelCd * (balanceLength - balancePosition - 1)) / (balanceLength - 1);
+            rightVolume = (newVolumeLevelCd * balancePosition) / (balanceLength - 1);
+        }
+
+        // Bounds checks
+        if (leftVolume < 0) leftVolume = 0; 
+        if (leftVolume > MAX_VOLUME_CD) leftVolume = MAX_VOLUME_CD; 
+        if (rightVolume < 0) rightVolume = 0; 
+        if (rightVolume > MAX_VOLUME_CD) rightVolume = MAX_VOLUME_CD; 
+
+        // Send new volume parameters
+        initSpu(leftVolume, rightVolume);
+        
+        // Exit Balance Mode
+        if (button == PADRright) {
+            return;
+        }
+    }
+}
 
 void selectCustomTracks() {
     int selectedTrack = 1; // Start selection on track 1

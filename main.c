@@ -43,7 +43,8 @@
     #define OT_LENGTH 1                             // ordering table length
     #define PACKETMAX (300)                         // the max num of objects
     #define MAX_VOLUME_CD 32767                     // maximum volume for an audio CD (0x7FFF)
-    #define MAX_VOLUME_MASTER 16383                 // maximum master volume (0x3FFF)
+    #define MAX_VOLUME_MASTER 16383                 // maximum master volume (0x3FFF), this can't be adjusted on the fly and displays 0 at all times, but no audio without init
+    #define BALANCE_RANGE 100
 
     GsOT      WorldOrderingTable[2];                 // ordering table handlers
     GsOT_TAG  OrderingTable[2][1<<OT_LENGTH];        // ordering tables
@@ -57,13 +58,13 @@
     unsigned char background[];         // bg image array converted from TIM file
     unsigned char startBtnMenu[];
 
-    // Globals -----
+    // Globals ------------------------------------------------------------------------------
     CdlLOC loc[100];                    // Array to store locations of tracks
 
     u_char cdInfoGetlocp[8];
     u_char result[8];                    // general response storage
 
-    //long int image1_addr;				// DRAM address storage of TIM file
+    //long int image1_addr;				// DRAM address storage of TIM file, from loadTIM example, wasn't used
 
     unsigned int currentTrackTimeInSeconds = 0;  // to hold current track time in seconds
 
@@ -72,6 +73,18 @@
     int numTracks = 0x00;                // for storing number of audio tracks found on CD
     int debounceTimer= 0;                // controller input debounce timer
     int shuffledTracks[101] = {0x00};    // Max tracks 100, for shuffle/ built in CdPlay function we need an extra element to contain zero (could have implemented shuffle manually though)
+    int balancePosition = 0; // Balance position (-50 to +50)
+
+       statusFlags flag = {
+        .repeat = true,                         // Repeat mode enabled
+        .shuffle = false,                       // Shuffle mode disabled
+        .selectedShuffleMode = false,           // shuffle mode flag, 0 for random, 1 for custom
+        .shuffleSelectionBreakEarly = false,    // No early break in shuffle selection
+        .reverb = false,                        // Reverb effect enabled
+        .mute = false                           // Mute off
+    };
+    // --------------------------------------------------------------------------------------
+
 
     typedef struct 
     {
@@ -80,28 +93,20 @@
     } TrackTime;
 
 
-   statusFlags flag = {
-        .repeat = true,                         // Repeat mode enabled
-        .shuffle = false,                       // Shuffle mode disabled
-        .selectedShuffleMode = false,           // shuffle mode flag, 0 for random, 1 for custom
-        .shuffleSelectionBreakEarly = false,    // No early break in shuffle selection
-        .reverb = false,                        // Reverb effect enabled
-        .mute = false                           // Mute off
-    };
-
-    // function dec
-    void clearVRAM();
+    // function decs
     void initImage(unsigned char *loadTimArray);
+    void clearVRAM();
+    // -------------
 
-    void initSpu(int applyVolumeCd, int applyVolumeMaster) 
+        void initSpu(int applyVolumeCdLeft, int applyVolumeCdRight) 
     {
-/*
+        /*
         The volume mode is ‘direct mode’ and the range of the values which can be set to the mvolL and mvolR
         volumes is equal to that of the ‘direct mode’ in SpuSetVoiceAttr() (-0x4000 to 0x3fff).
-*/      SpuSetCommonMasterVolume(applyVolumeMaster, applyVolumeMaster);
-
+        */
+        SpuSetCommonMasterVolume(MAX_VOLUME_MASTER, MAX_VOLUME_MASTER);
         //Set independently for left and right in the range -0x8000 - 0x7fff. If volume is negative, the phase is inverted.
-        SpuSetCommonCDVolume(applyVolumeCd, applyVolumeCd);
+        SpuSetCommonCDVolume(applyVolumeCdLeft, applyVolumeCdRight);
 
         // No output without CD Mixing turned on
         SpuSetCommonCDMix(1);
@@ -114,14 +119,13 @@
         printf("Reverb (on/off): %x\n", attr.cd.reverb);
         printf("CD Mix (on/off): %x\n", attr.cd.mix);
     }
-        
+
     void readControllerInput()
     {
     
     int pad = 0x00;
     u_char trackValue;
     static int newVolumeLevelCd = MAX_VOLUME_CD;
-    static int newVolumeLevelMaster = MAX_VOLUME_MASTER;
     trackValue = decimalValues[track]; 
     
     //slow down the polling
@@ -134,17 +138,24 @@
         switch (pad) {
             /////////////////////////////////////   
             case PADLup:
-
-                
+                if (newVolumeLevelCd < MAX_VOLUME_CD) 
+                {
+                newVolumeLevelCd+=450; // applies the same volume to the left and right cd audio channels
+                initSpu(newVolumeLevelCd, newVolumeLevelCd);
+                }
+                printf("\nUP D-Pad pressed, volume increased\n");                
                 break;
             /////////////////////////////////////   
             case PADLdown:
-
-               
+                if (newVolumeLevelCd > 0) 
+                {
+                newVolumeLevelCd-=450; // applies the same volume to the left and right CD audio channels
+                initSpu(newVolumeLevelCd, newVolumeLevelCd);
+                }
+                printf("\nDown D-Pad pressed, volume decreased\n");
                 break;
             /////////////////////////////////////   
             case PADLright: // Increment the track with wrap around to first track
-
                 // Increment track value if not at last track
                 if (trackValue < numTracks) // shuffle can land on us last track with more to play in shuffledTracks array, but || with shuffle flag still trips out the player and resets it to track 1
                 {
@@ -161,7 +172,6 @@
                 break;
             /////////////////////////////////////   
             case PADLleft: // Decrement the track with wrap around to final track
-
                 // if playing first track, go to final track, if shuffle is off!
                 if (trackValue == 1 && flag.shuffle == 0)
                 {
@@ -179,7 +189,6 @@
                 break;
             /////////////////////////////////////      
             case PADRup:
-
             flag.shuffleSelectionBreakEarly = false;
             printf("\nShuffle button pressed (triangle)\n");
 
@@ -240,7 +249,6 @@
             break;
             /////////////////////////////////////   
             case PADRdown: // Play/Pause
-
             static bool pause = false;
             if (pause == false) 
             {
@@ -292,15 +300,7 @@
             break;
             /////////////////////////////////////   
             case PADL2: // L2
-             if (newVolumeLevelCd > 0) 
-                {
-                newVolumeLevelCd-=450; //tweak the steps!
-                initSpu(newVolumeLevelCd, newVolumeLevelMaster);
-                initSpu(newVolumeLevelCd, newVolumeLevelMaster);
-                }
-                printf("\nDown D-Pad pressed, volume decreased\n");
-                printf("\nL2 Pressed");
-        
+            balanceControl();
             break;
             /////////////////////////////////////   
             case PADR1:
@@ -317,35 +317,16 @@
                 break;
             /////////////////////////////////////   
             case PADR2: // R2
-                if (newVolumeLevelCd < MAX_VOLUME_CD) 
-                {
-                newVolumeLevelCd+=450; //tweak the steps!
-                initSpu(newVolumeLevelCd, newVolumeLevelMaster);
-                initSpu(newVolumeLevelCd, newVolumeLevelMaster);
-                }
-                printf("\nUP D-Pad pressed, volume increased\n");      
+            balanceControl();
                 break;
             /////////////////////////////////////   
             case PADstart:
             clearVRAM();
             initImage(startBtnMenu);
-            pad = 0x00; // This doesn't work for some reason, using a new variable here for padRead doesn't either, used circle as exit and not start again
-            while (1)
-            {
-                display(); // call display repeatedly, calling once prior to this loop must now allow enough time to load up and you get a blank screen
-                if (debounceTimer % 10 == 0)
-                {
-                    pad = 0x00;
-                    pad = PadRead(0);
-                    if (pad == PADRright)
-                    {
-                        break;
-                    }
-                }
-            debounceTimer++;
-            }
+            while (pad == PADstart) {pad = PadRead(0);  display();};
             clearVRAM();
             initImage(background);
+            display();
             break;
             /////////////////////////////////////   
             case PADselect:
@@ -432,7 +413,7 @@
         // PAL MODE
         SCREEN_WIDTH = 320;
         SCREEN_HEIGHT = 256;
-        printf("Setting the PlayStation Video Mode to (PAL %dx%d)\n",SCREEN_WIDTH,SCREEN_HEIGHT,")");
+        printf("Setting the PlayStation Video Mode to (PAL %dx%d)\n",SCREEN_WIDTH,SCREEN_HEIGHT);
         SetVideoMode(1);
         printf("Video Mode: PAL\n");
       }
@@ -441,7 +422,7 @@
         // NTSC MODE
         SCREEN_WIDTH = 320;
         SCREEN_HEIGHT = 240;
-        printf("Setting the PlayStation Video Mode to (NTSC %dx%d)\n",SCREEN_WIDTH,SCREEN_HEIGHT,")");
+        printf("Setting the PlayStation Video Mode to (NTSC %dx%d)\n",SCREEN_WIDTH,SCREEN_HEIGHT);
         SetVideoMode(0);
         printf("Video Mode: NTSC\n");
       }
@@ -859,7 +840,7 @@
         • DMA transfer initialization set
         The status of the sound buffer is indeterminate after initialization.
         */
-      initSpu(MAX_VOLUME_CD, MAX_VOLUME_MASTER); // now set the desired SPU settings
+      initSpu(MAX_VOLUME_CD, MAX_VOLUME_CD); // now set the desired SPU settings
       ResetCallback(); // initialises all system callbacks
       initGraphics(); // this will initialise the graphics
       initFont(); // initialise the psy-q debugging font
@@ -883,6 +864,6 @@
 /*
 fix shuffle bug where landing on final track in shuffledTrack array mid CD won't allow a manual (Right Dpad) track increment to next track/ array element of shuffledTrack
 Unsure why it even increments correctly through the array up until that track comes up, it might be a bug in the SDK
-add L/R balance
+
 add repeat on/off
 */

@@ -11,9 +11,7 @@
 #define cdlNopStatusByte result[0]
 
 // Function prototypes
-int bcdToDecimal(unsigned char bcd);
 void convertBcdValuesToDecimal(unsigned char bcdValues[], int decimalValues[], int size);
-int isValueInArray(int value, int *array, int size);
 void checkDriveLidStatus();
 void FntColor(CVECTOR fgcol, CVECTOR bgcol);
 void getTableOfContents();
@@ -21,10 +19,16 @@ void playerInformationLogic();
 void display();
 void initFont();
 void drawTextAtPosition(int x, int y, const char* text);
-int shuffleModeSelection(int button);
 void shuffleFunction();
 void selectCustomTracks();
+void display();
+void balanceControl();
+void initSpu(int applyVolumeCdLeft, int applyVolumeCdRight);
+
+int isValueInArray(int value, int *array, int size);
 int convertToPercentage(int volume);
+int shuffleModeSelection(int button);
+int bcdToDecimal(unsigned char bcd);
 
 // shared variables
 extern u_char result[8];
@@ -32,6 +36,9 @@ extern u_char result[8];
 extern CdlLOC loc[100];
 extern CVECTOR fntColor;    // Foreground color
 extern CVECTOR fntColorBG;  // Background color
+
+extern unsigned char startBtnMenu[];
+extern unsigned char background[];
 
 extern int trackCount;
 extern int numTracks;
