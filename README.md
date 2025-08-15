@@ -32,7 +32,7 @@ The **progress bar** at the bottom of the player dynamically updates for each tr
 
 ## 📦 Acknowledgements
 Special thanks to the following projects and tools:
-- [**OrionSoft PS1USB**](https://www.orionsoft.games/retroshop/ps1usb.htm) – for debugging over USB.
+- [**OrionSoft PS1USB**](https://www.orionsoft.games/retroshop/ps1usb.htm) – for sending the software across to the PS1 for execution and terrific debugging.
 - [**Hello CDDA example by ABelliqueux**](https://github.com/ABelliqueux/nolibgs_hello_worlds/blob/main/hello_cdda/hello_cdda.c) – for basic CD audio handling.
 - [**TIM Example on PSXDev**](https://www.psxdev.net/forum/viewtopic.php?t=313) – for TIM image rendering guidance.
 
